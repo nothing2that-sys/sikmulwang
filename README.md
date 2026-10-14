@@ -3,7 +3,7 @@
 > 내 공간과 계절에 맞는 식물을 찾고, 오늘의 관리를 끝내고, 성장과 수확의 기록을 내 데이터로 남기는 웹/PWA 서비스.
 
 - Repository: https://github.com/nothing2that-sys/sikmulwang
-- 문서 상태: **DRAFT — 설계 초안, 구현·승인 전**
+- 문서 상태: **DESIGN_REWORK_DRAFT — 독립 검토 REWORK_REQUIRED, 설계 재작업 및 재검토 전**
 - 작성 기준일: 2026-10-14
 - 제품 유형: 로컬 우선(Local-first) 반응형 웹 + 점진적 PWA
 - 개인 데이터: 기기 내 IndexedDB를 주 저장소로 사용. 별도 식물왕 계정과 중앙 개인 데이터베이스는 기본 범위에서 제외
@@ -30,6 +30,11 @@
 9. [보안·접근성·호환성](docs/08_SECURITY_ACCESSIBILITY.md)
 10. [구현 로드맵·검증 게이트](docs/09_IMPLEMENTATION_QA.md)
 11. [열린 의사결정](docs/10_DECISION_LOG.md)
+12. [독립 검토 Rework 게이트](docs/11_DESIGN_REWORK_GATE.md)
+13. [로컬 데이터 및 관리 상태 계약](docs/12_DATA_CONTRACT_V1.md)
+14. [무손실 백업·복원 프로토콜](docs/13_BACKUP_RESTORE_PROTOCOL.md)
+15. [결정적 규칙과 고정 테스트](docs/14_RULES_AND_FIXTURES.md)
+16. [요구사항과 테스트 추적표](docs/15_REQUIREMENT_TRACEABILITY.md)
 
 ## 기술 기준선 (제안)
 
