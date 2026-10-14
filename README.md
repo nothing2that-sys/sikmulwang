@@ -47,3 +47,15 @@
 - 검증: 단위 테스트 + 브라우저 E2E + 데이터 복원 회귀 테스트
 
 이 문서들은 구현 전에 검토할 설계 초안이며, 실제 API 데이터 제공 범위·이용허락·운영비는 별도의 검증 게이트를 통과해야 합니다.
+
+## Phase 0 웹 기반
+
+`web/`에 React + TypeScript + Vite 기반 반응형 웹과 PWA 앱 셸을 구현했습니다. 오늘, 식물 찾기, 내 식물, 일기장, 설정 및 데이터 관리 화면을 제공합니다.
+
+```bash
+cd web
+npm install
+npm run dev
+```
+
+검증 명령, 오프라인 실행 방법, 미구현 범위는 [웹 실행 안내](web/README.md)와 [Phase 0 구현 보고서](docs/implementation/P0_WEB_FOUNDATION_REPORT.md)를 확인하세요. 기존 설계 승인 상태는 변경하지 않습니다.
