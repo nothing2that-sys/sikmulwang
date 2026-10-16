@@ -13,14 +13,14 @@ npx playwright install --with-deps chromium
 npm run test:e2e
 ```
 
-개발 서버 기본 주소는 `http://127.0.0.1:5173`입니다. Playwright는 빌드 후 `4173` 포트의 Vite preview 서버를 직접 실행합니다. 별도 설치된 Chromium을 검증할 때만 `PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH`를 지정할 수 있습니다. CI는 Playwright 기본 Chromium을 사용합니다.
+개발 서버 기본 주소는 `http://127.0.0.1:5173`입니다. `npm run test:e2e`는 프로덕션 빌드(`npm run build`)를 먼저 수행한 뒤, 기존 `4173` 포트 서버를 재사용하지 않고 Vite preview 서버를 새로 실행합니다. 별도 설치된 Chromium을 검증할 때만 `PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH`를 지정할 수 있습니다. CI는 Playwright 기본 Chromium을 사용합니다.
 
 ## 화면 및 동작
 
 | 경로 | 제공 기능 |
 |---|---|
 | `/` | 실제 기록이 없는 빈 상태, 최대 3개 데모 관리 카드 선택 표시 |
-| `/discover` | 샘플 이름 검색, 유형·장소·계절 조합 필터, URL 필터 유지 |
+| `/discover` | 샘플 이름 검색, 유형·장소·계절 조합 필터, URL 검색어(`q`)·필터 유지 및 상세 복귀 보존 |
 | `/discover/:id` | 격리된 샘플 상세, 가상 값 및 정보 부족 표시 |
 | `/plants` | 장소 필터, 빈 상태, 개체·그룹 예시 |
 | `/plants/preview` | 상세 영역 전환과 예정 기능 안내 |
@@ -49,4 +49,4 @@ npm run preview
 
 사용자 데이터 영속화, 실제 등록·급수·일기·사진 저장, ZIP, Drive OAuth, 실제 기상·진단은 구현하지 않았습니다. 폼 입력은 화면 이동이나 새로고침 시 사라집니다. 디자인 토큰은 의미별 CSS 변수로 분리하되 라이트 테마만 제공합니다.
 
-`src/test`는 27개 단위·컴포넌트·PWA 상태 테스트를 제공하고, `tests/e2e`는 Chromium 기반 경로·반응형·키보드·자동 접근성·오프라인·업데이트 검증을 제공합니다. 자동 접근성 검사는 수동 스크린리더 검증이나 WCAG 전체 준수 인증을 대체하지 않습니다. 실제 결과와 브라우저 제한은 구현 보고서를 확인하세요.
+`src/test`는 34개 단위·컴포넌트·PWA 상태 테스트를 제공하고, `tests/e2e`는 15개 Chromium 기반 경로·반응형·터치 타깃·키보드·자동 접근성·오프라인·업데이트·실패 전환 검증을 제공합니다. 자동 접근성 검사는 수동 스크린리더 검증이나 WCAG 전체 준수 인증을 대체하지 않습니다. 실제 결과와 브라우저 제한은 구현 보고서를 확인하세요.

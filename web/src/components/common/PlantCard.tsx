@@ -6,9 +6,11 @@ import { StatusBadge } from "./Feedback";
 export function PlantCard({
   plant,
   groupLabel,
+  search = "",
 }: {
   plant: DemoPlant;
   groupLabel?: string;
+  search?: string;
 }) {
   const Icon = { leaf: Leaf, sprout: Sprout, flower: Flower2 }[plant.visual];
   return (
@@ -30,7 +32,7 @@ export function PlantCard({
           난이도: {plant.difficulty} <span className="muted">(가상 값)</span>
         </p>
         <p className="field-hint">{plant.reason}</p>
-        <Link className="text-link" to={`/discover/${plant.id}`}>
+        <Link className="text-link" to={`/discover/${plant.id}${search}`}>
           {plant.name} 상세정보 <ArrowUpRight size={17} aria-hidden="true" />
         </Link>
       </div>

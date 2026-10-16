@@ -48,6 +48,16 @@ export type CatalogFilters = {
   place: string;
   season: string;
 };
+const discoverFilterKeys = ["q", "category", "place", "season"] as const;
+export function buildDiscoverSearch(params: URLSearchParams): string {
+  const next = new URLSearchParams();
+  for (const key of discoverFilterKeys) {
+    const value = params.get(key);
+    if (value) next.set(key, value);
+  }
+  const search = next.toString();
+  return search ? `?${search}` : "";
+}
 export function filterDemoCatalog(filters: CatalogFilters): DemoPlant[] {
   return demoCatalog.filter(
     (plant) =>

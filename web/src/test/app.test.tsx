@@ -13,6 +13,7 @@ import {
 } from "../components/common/Feedback";
 import { FormField } from "../components/common/FormField";
 import {
+  buildDiscoverSearch,
   demoCatalog,
   filterDemoCatalog,
 } from "../features/discover/demo-catalog";
@@ -94,14 +95,21 @@ describe("catalog exploration", () => {
   it("renders demo provenance and informational plant card", () => {
     render(
       <MemoryRouter>
-        <PlantCard plant={demoCatalog[0]} groupLabel="개체 · 예시 1개" />
+        <PlantCard
+          plant={demoCatalog[0]}
+          groupLabel="개체 · 예시 1개"
+          search="?q=%EB%AA%AC%EC%8A%A4%ED%85%8C%EB%9D%BC"
+        />
       </MemoryRouter>,
     );
     expect(screen.getByText("개발용 샘플")).toBeVisible();
     expect(screen.getByText("정보 부족")).toBeVisible();
     expect(
       screen.getByRole("link", { name: "몬스테라 상세정보" }),
-    ).toHaveAttribute("href", "/discover/demo-monstera");
+    ).toHaveAttribute(
+      "href",
+      "/discover/demo-monstera?q=%EB%AA%AC%EC%8A%A4%ED%85%8C%EB%9D%BC",
+    );
   });
   it("combines search, type, place, season and reset", async () => {
     app("/discover");
@@ -112,12 +120,49 @@ describe("catalog exploration", () => {
     await userEvent.click(
       screen.getByRole("button", { name: "검색 및 필터 초기화" }),
     );
+    expect(screen.getByRole("searchbox")).toHaveValue("");
     await userEvent.selectOptions(screen.getByLabelText("재배 장소"), "야외");
     await userEvent.selectOptions(screen.getByLabelText("계절"), "봄");
     expect(screen.getByRole("heading", { name: "상추" })).toBeVisible();
     expect(
       screen.queryByRole("heading", { name: "바질" }),
     ).not.toBeInTheDocument();
+  });
+  it("preserves URL search and filters across detail navigation and return", async () => {
+    app("/discover?q=바질&category=허브&place=베란다&season=여름");
+    expect(screen.getByRole("searchbox")).toHaveValue("바질");
+    expect(screen.getByLabelText("식물 유형")).toHaveValue("허브");
+    expect(screen.getByLabelText("재배 장소")).toHaveValue("베란다");
+    expect(screen.getByLabelText("계절")).toHaveValue("여름");
+    expect(screen.getByText("1종")).toBeVisible();
+
+    await userEvent.click(screen.getByRole("link", { name: "바질 상세정보" }));
+    expect(
+      screen.getByRole("heading", { level: 1, name: "바질" }),
+    ).toBeVisible();
+    await userEvent.click(screen.getByRole("link", { name: "식물 찾기로" }));
+    expect(
+      screen.getByRole("heading", { level: 1, name: "식물 찾기" }),
+    ).toBeVisible();
+    expect(screen.getByRole("searchbox")).toHaveValue("바질");
+    expect(screen.getByLabelText("식물 유형")).toHaveValue("허브");
+    expect(screen.getByLabelText("재배 장소")).toHaveValue("베란다");
+    expect(screen.getByLabelText("계절")).toHaveValue("여름");
+    expect(screen.getByText("1종")).toBeVisible();
+  });
+  it("returns cleanly to discover list when detail is opened directly", async () => {
+    app("/discover/demo-basil");
+    await userEvent.click(screen.getByRole("link", { name: "식물 찾기로" }));
+    expect(
+      screen.getByRole("heading", { level: 1, name: "식물 찾기" }),
+    ).toBeVisible();
+    expect(screen.getByRole("searchbox")).toHaveValue("");
+    expect(screen.getByText("3종")).toBeVisible();
+    expect(
+      buildDiscoverSearch(
+        new URLSearchParams("q=바질&season=여름&evil=https://example.com"),
+      ),
+    ).toBe("?q=%EB%B0%94%EC%A7%88&season=%EC%97%AC%EB%A6%84");
   });
   it("preserves URL season and labels details unverified", () => {
     app("/discover?season=겨울");
@@ -167,6 +212,55 @@ describe("journal and planned functionality", () => {
     app("/settings");
     for (const button of screen.getAllByRole("button"))
       expect(button).toBeDisabled();
+  });
+  it("cleans up update dialog and shows update error when waiting worker becomes redundant", async () => {
+    vi.stubEnv("PROD", true);
+    const waiting = Object.assign(new EventTarget(), {
+      state: "installed" as ServiceWorkerState,
+      postMessage: vi.fn(() => {
+        waiting.state = "redundant";
+        waiting.dispatchEvent(new Event("statechange"));
+      }),
+    });
+    const registration = Object.assign(new EventTarget(), {
+      installing: null,
+      waiting,
+      active: { state: "activated" },
+      update: vi.fn().mockResolvedValue(undefined),
+    });
+    const container = Object.assign(new EventTarget(), {
+      controller: {},
+      register: vi.fn().mockResolvedValue(registration),
+    });
+    vi.stubGlobal("navigator", { serviceWorker: container, onLine: true });
+    try {
+      app("/settings");
+      const openBtn = await screen.findByRole("button", {
+        name: "업데이트 안내",
+      });
+      await userEvent.click(openBtn);
+      expect(
+        screen.getByRole("dialog", { name: "새 버전으로 전환할까요?" }),
+      ).toBeVisible();
+      await userEvent.click(
+        screen.getByRole("button", { name: "업데이트하고 새로고침" }),
+      );
+      expect(
+        screen.queryByRole("dialog", { name: "새 버전으로 전환할까요?" }),
+      ).not.toBeInTheDocument();
+      expect(
+        screen.getByRole("alert"),
+      ).toHaveTextContent(
+        "새 버전 업데이트에 실패했어요. 현재 오프라인 화면은 계속 이용할 수 있어요.",
+      );
+      expect(screen.getByText("앱 셸 오프라인 준비됨")).toBeVisible();
+      expect(
+        screen.getByText("새 버전 업데이트 실패 · 기존 오프라인 화면 유지됨"),
+      ).toBeVisible();
+    } finally {
+      vi.unstubAllGlobals();
+      vi.unstubAllEnvs();
+    }
   });
   it("builds complete leap month and local date", () => {
     const cells = calendarCells(2024, 1);

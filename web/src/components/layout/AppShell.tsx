@@ -12,7 +12,7 @@ export function AppShell({ children }: { children: ReactNode }) {
   const location = useLocation();
   const main = useRef<HTMLElement>(null);
   const previous = useRef(location.pathname);
-  const { status, worker } = usePwa();
+  const { status, worker, updateState, applyUpdate } = usePwa();
   const [confirm, setConfirm] = useState(false);
   useEffect(() => {
     if (previous.current !== location.pathname) {
@@ -57,6 +57,14 @@ export function AppShell({ children }: { children: ReactNode }) {
           </button>
         </div>
       )}
+      {updateState === "error" && (
+        <div className="update-notice error" role="alert">
+          <p>
+            새 버전 업데이트에 실패했어요. 현재 오프라인 화면은 계속 이용할 수
+            있어요.
+          </p>
+        </div>
+      )}
       <main id="main-content" tabIndex={-1} ref={main}>
         {children}
       </main>
@@ -65,11 +73,14 @@ export function AppShell({ children }: { children: ReactNode }) {
         <span>Phase 0 미리보기 · 개인 데이터 저장 기능은 준비 중</span>
       </footer>
       <ConfirmDialog
-        open={confirm}
+        open={confirm && Boolean(worker)}
         title="새 버전으로 전환할까요?"
         confirmLabel="업데이트하고 새로고침"
         onCancel={() => setConfirm(false)}
-        onConfirm={() => worker?.postMessage({ type: "SKIP_WAITING" })}
+        onConfirm={() => {
+          setConfirm(false);
+          applyUpdate();
+        }}
       >
         <p>
           작성 중인 미리보기 입력은 저장되지 않습니다. 필요한 내용을 먼저 복사해

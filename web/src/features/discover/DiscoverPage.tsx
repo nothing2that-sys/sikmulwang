@@ -1,5 +1,4 @@
 import { useSearchParams, Link, useParams } from "react-router-dom";
-import { useState } from "react";
 import { ArrowLeft } from "lucide-react";
 import {
   PageContainer,
@@ -12,21 +11,33 @@ import {
   StatusBadge,
 } from "../../components/common/Feedback";
 import { PlantCard } from "../../components/common/PlantCard";
-import { demoCatalog, filterDemoCatalog } from "./demo-catalog";
+import {
+  buildDiscoverSearch,
+  demoCatalog,
+  filterDemoCatalog,
+} from "./demo-catalog";
 import { NotFoundPage } from "../../app/router/NotFoundPage";
 
 export function DiscoverPage() {
   const [params, setParams] = useSearchParams();
-  const [query, setQuery] = useState("");
+  const query = params.get("q") ?? "";
   const category = params.get("category") ?? "";
   const place = params.get("place") ?? "";
   const season = params.get("season") ?? "";
+  const search = buildDiscoverSearch(params);
   const results = filterDemoCatalog({ query, category, place, season });
-  function update(key: string, value: string) {
-    const next = new URLSearchParams(params);
-    if (value) next.set(key, value);
-    else next.delete(key);
-    setParams(next, { replace: true });
+  function update(
+    key: "q" | "category" | "place" | "season",
+    value: string,
+    replace = false,
+  ) {
+    const next = new URLSearchParams();
+    for (const filterKey of ["q", "category", "place", "season"] as const) {
+      const current =
+        filterKey === key ? value : (params.get(filterKey) ?? "");
+      if (current) next.set(filterKey, current);
+    }
+    setParams(next, { replace });
   }
   return (
     <PageContainer>
@@ -46,30 +57,38 @@ export function DiscoverPage() {
             type="search"
             placeholder="예: 몬스테라"
             value={query}
-            onChange={(event) => setQuery(event.target.value)}
+            onChange={(event) =>
+              update(
+                "q",
+                event.target.value,
+                params.has("q") && event.target.value.length > 0,
+              )
+            }
           />
         </FormField>
         <div className="filter-grid">
-          {[
-            {
-              key: "category",
-              label: "식물 유형",
-              values: ["관엽", "허브", "채소"],
-              selected: category,
-            },
-            {
-              key: "place",
-              label: "재배 장소",
-              values: ["실내", "베란다", "야외"],
-              selected: place,
-            },
-            {
-              key: "season",
-              label: "계절",
-              values: ["봄", "여름", "가을", "겨울"],
-              selected: season,
-            },
-          ].map((filter) => (
+          {(
+            [
+              {
+                key: "category",
+                label: "식물 유형",
+                values: ["관엽", "허브", "채소"],
+                selected: category,
+              },
+              {
+                key: "place",
+                label: "재배 장소",
+                values: ["실내", "베란다", "야외"],
+                selected: place,
+              },
+              {
+                key: "season",
+                label: "계절",
+                values: ["봄", "여름", "가을", "겨울"],
+                selected: season,
+              },
+            ] as const
+          ).map((filter) => (
             <FormField key={filter.key} id={filter.key} label={filter.label}>
               <select
                 id={filter.key}
@@ -88,8 +107,7 @@ export function DiscoverPage() {
           className="text-link"
           type="button"
           onClick={() => {
-            setQuery("");
-            setParams({});
+            if (search) setParams({});
           }}
         >
           검색 및 필터 초기화
@@ -102,7 +120,7 @@ export function DiscoverPage() {
       {results.length ? (
         <div className="plant-grid">
           {results.map((plant) => (
-            <PlantCard key={plant.id} plant={plant} />
+            <PlantCard key={plant.id} plant={plant} search={search} />
           ))}
         </div>
       ) : (
@@ -123,11 +141,13 @@ export function DiscoverPage() {
 }
 export function DemoPlantDetailPage() {
   const { id } = useParams();
+  const [params] = useSearchParams();
   const plant = demoCatalog.find((item) => item.id === id);
   if (!plant) return <NotFoundPage />;
+  const search = buildDiscoverSearch(params);
   return (
     <PageContainer>
-      <Link className="text-link back-link" to="/discover">
+      <Link className="text-link back-link" to={`/discover${search}`}>
         <ArrowLeft size={18} aria-hidden="true" />
         식물 찾기로
       </Link>
@@ -141,7 +161,7 @@ export function DemoPlantDetailPage() {
         사용하지 마세요.
       </PhaseNotice>
       <div className="detail-grid">
-        <PlantCard plant={plant} />
+        <PlantCard plant={plant} search={search} />
         <section className="card">
           <h2>추천 근거</h2>
           <StatusBadge>정보 부족</StatusBadge>

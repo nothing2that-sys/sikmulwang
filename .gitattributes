@@ -1,0 +1,6 @@
+docs/implementation/evidence/**/*.xml text eol=lf
+docs/implementation/evidence/**/*.json text eol=lf
+docs/implementation/evidence/**/*.png binary
+docs/implementation/evidence-rework/**/*.xml text eol=lf
+docs/implementation/evidence-rework/**/*.json text eol=lf
+docs/implementation/evidence-rework/**/*.png binary

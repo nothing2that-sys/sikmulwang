@@ -64,7 +64,7 @@
     outline: 3px solid var(--focus);
     outline-offset: 4px;
   }
-  h1:focus {
+  h1:focus:not(:focus-visible) {
     outline: none;
   }
   button:disabled,
@@ -109,6 +109,7 @@
     font-weight: 600;
   }
   summary {
+    min-width: 44px;
     min-height: 44px;
     padding: 0.75rem 0;
     font-weight: 600;
@@ -197,6 +198,7 @@
     align-items: center;
     justify-content: center;
     gap: 0.15rem;
+    min-width: 44px;
     min-height: 58px;
     border-radius: 0.75rem;
     color: var(--muted);
@@ -317,6 +319,7 @@
     align-items: center;
     justify-content: center;
     gap: 0.5rem;
+    min-width: 44px;
     min-height: 48px;
     padding: 0.7rem 1rem;
     border-radius: var(--radius-control);
@@ -346,6 +349,7 @@
     align-items: center;
     justify-content: flex-start;
     gap: 0.5rem;
+    min-width: 44px;
     min-height: 44px;
     color: var(--brand);
     font-weight: 650;
@@ -510,6 +514,7 @@
     color: var(--brand);
   }
   .demo-toggle {
+    min-width: 44px;
     min-height: 44px;
     display: flex;
     gap: 0.6rem;
@@ -523,6 +528,7 @@
     gap: 0.45rem;
   }
   .segmented button {
+    min-width: 44px;
     min-height: 44px;
     padding: 0.55rem 1rem;
     border: 1px solid var(--control-border);
@@ -623,6 +629,7 @@
     display: flex;
     align-items: center;
     gap: 0.5rem;
+    min-width: 44px;
     min-height: 44px;
   }
   .setting-row {
@@ -705,14 +712,32 @@
     position: fixed;
     top: 0.5rem;
     left: 0.5rem;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    clip-path: inset(50%);
+    white-space: nowrap;
     transform: translateY(-160%);
     background: var(--brand);
     color: white;
-    padding: 0.8rem;
     z-index: 30;
     border-radius: var(--radius-control);
   }
-  .skip-link:focus {
+  .skip-link:focus,
+  .skip-link:focus-visible {
+    width: auto;
+    height: auto;
+    min-width: 44px;
+    min-height: 44px;
+    margin: 0;
+    padding: 0.8rem;
+    overflow: visible;
+    clip: auto;
+    clip-path: none;
+    white-space: normal;
     transform: translateY(0);
   }
 }

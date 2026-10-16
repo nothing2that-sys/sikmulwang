@@ -6,7 +6,7 @@ import { StatusBadge } from "../../components/common/Feedback";
 import { usePwa } from "../../app/providers/PwaProvider";
 
 export function SettingsPage() {
-  const { status } = usePwa();
+  const { status, updateState } = usePwa();
   const statusLabels = {
     development: "개발 서버 · 오프라인 캐시 사용 안 함",
     unsupported: "이 브라우저에서는 서비스워커를 지원하지 않아요",
@@ -78,6 +78,11 @@ export function SettingsPage() {
               <dt>오프라인</dt>
               <dd>
                 <span role="status">{statusLabels[status]}</span>
+                {updateState === "error" && (
+                  <p className="field-error">
+                    새 버전 업데이트 실패 · 기존 오프라인 화면 유지됨
+                  </p>
+                )}
               </dd>
             </div>
             <div>
