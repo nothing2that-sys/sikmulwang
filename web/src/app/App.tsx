@@ -14,6 +14,8 @@ import { JournalComposePage } from "../features/journal/JournalComposePage";
 import { SettingsPage } from "../features/settings/SettingsPage";
 import { NotFoundPage } from "./router/NotFoundPage";
 
+import { DbProvider } from "../lib/db/DbContext";
+
 class AppErrorBoundary extends Component<
   { children: ReactNode },
   { failed: boolean }
@@ -41,21 +43,23 @@ export function App() {
   return (
     <AppErrorBoundary>
       <PwaProvider>
-        <AppShell>
-          <Routes>
-            <Route path="/" element={<TodayPage />} />
-            <Route path="/discover" element={<DiscoverPage />} />
-            <Route path="/discover/:id" element={<DemoPlantDetailPage />} />
-            <Route path="/plants" element={<PlantsPage />} />
-            <Route path="/plants/preview" element={<PlantPreviewPage />} />
-            <Route path="/journal" element={<JournalPage />} />
-            <Route path="/journal/new" element={<JournalComposePage />} />
-            <Route path="/settings" element={<SettingsPage />} />
-            <Route path="/week" element={<WeekPage />} />
-            <Route path="/check" element={<CheckPage />} />
-            <Route path="*" element={<NotFoundPage />} />
-          </Routes>
-        </AppShell>
+        <DbProvider>
+          <AppShell>
+            <Routes>
+              <Route path="/" element={<TodayPage />} />
+              <Route path="/discover" element={<DiscoverPage />} />
+              <Route path="/discover/:id" element={<DemoPlantDetailPage />} />
+              <Route path="/plants" element={<PlantsPage />} />
+              <Route path="/plants/preview" element={<PlantPreviewPage />} />
+              <Route path="/journal" element={<JournalPage />} />
+              <Route path="/journal/new" element={<JournalComposePage />} />
+              <Route path="/settings" element={<SettingsPage />} />
+              <Route path="/week" element={<WeekPage />} />
+              <Route path="/check" element={<CheckPage />} />
+              <Route path="*" element={<NotFoundPage />} />
+            </Routes>
+          </AppShell>
+        </DbProvider>
       </PwaProvider>
     </AppErrorBoundary>
   );
