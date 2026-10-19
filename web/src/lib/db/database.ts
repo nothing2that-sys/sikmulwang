@@ -113,33 +113,52 @@ export interface InitializedMeta {
 export async function initializeDatabase(
   db: SikmulwangDB = getDb()
 ): Promise<InitializedMeta> {
-  const metaEntries = await db.meta.toArray();
-  const metaMap = new Map(metaEntries.map((e) => [e.key, e.value]));
+  return await db.transaction(
+    "rw",
+    [
+      db.meta,
+      db.profiles,
+      db.generationRegistry,
+      db.locations,
+      db.userPreferences,
+    ],
+    async () => {
+      const metaEntries = await db.meta.toArray();
+      const metaMap = new Map(metaEntries.map((e) => [e.key, e.value]));
 
-  const hasInitialized =
-    metaMap.has("activeProfileId") &&
-    metaMap.has("activeGenerationId") &&
-    metaMap.has("epoch");
+      const hasInitialized =
+        metaMap.has("activeProfileId") &&
+        metaMap.has("activeGenerationId") &&
+        metaMap.has("epoch");
 
-  const now = new Date().toISOString();
+      if (hasInitialized) {
+        return {
+          activeProfileId: String(metaMap.get("activeProfileId") ?? "p_default"),
+          activeGenerationId: String(
+            metaMap.get("activeGenerationId") ?? "g_default"
+          ),
+          epoch: Number(metaMap.get("epoch") ?? 1),
+          writeFence: Boolean(metaMap.get("writeFence") ?? false),
+          schemaVersion: Number(metaMap.get("schemaVersion") ?? 1),
+        };
+      }
 
-  if (!hasInitialized) {
-    const defaultProfileId = "p_default";
-    const defaultGenerationId = "g_default";
-    const defaultEpoch = 1;
-    const defaultSchemaVersion = 1;
+      // Check for partial corruption (e.g. some meta keys exist but core ones are missing)
+      if (metaEntries.length > 0 && !hasInitialized) {
+        throw new Error(
+          "데이터베이스 메타데이터가 손상되었습니다. 기존 데이터를 보호하기 위해 초기화를 중단합니다."
+        );
+      }
 
-    await db.transaction(
-      "rw",
-      [
-        db.meta,
-        db.profiles,
-        db.generationRegistry,
-        db.locations,
-        db.userPreferences,
-      ],
-      async () => {
-        //+_+// 1. Create default profile
+      const defaultProfileId = "p_default";
+      const defaultGenerationId = "g_default";
+      const defaultEpoch = 1;
+      const defaultSchemaVersion = 1;
+      const now = new Date().toISOString();
+
+      // 1. Create default profile if not exists
+      const existingProfile = await db.profiles.get(defaultProfileId);
+      if (!existingProfile) {
         await db.profiles.put({
           profileId: defaultProfileId,
           name: "기본 정원",
@@ -147,8 +166,11 @@ export async function initializeDatabase(
           createdAt: now,
           updatedAt: now,
         });
+      }
 
-        //+_+// 2. Create default generation
+      // 2. Create default generation if not exists
+      const existingGen = await db.generationRegistry.get(defaultGenerationId);
+      if (!existingGen) {
         await db.generationRegistry.put({
           generationId: defaultGenerationId,
           profileId: defaultProfileId,
@@ -157,8 +179,15 @@ export async function initializeDatabase(
           createdAt: now,
           updatedAt: now,
         });
+      }
 
-        //+_+// 3. Create default seed locations
+      // 3. Seed locations only if no location exists in this generation
+      const existingLocCount = await db.locations
+        .where("generationId")
+        .equals(defaultGenerationId)
+        .count();
+
+      if (existingLocCount === 0) {
         const seedLocations: LocationRecord[] = [
           {
             generationId: defaultGenerationId,
@@ -207,8 +236,14 @@ export async function initializeDatabase(
         for (const loc of seedLocations) {
           await db.locations.put(loc);
         }
+      }
 
-        //+_+// 4. Create default user preferences
+      // 4. Create default user preferences if not exists
+      const existingPref = await db.userPreferences.get([
+        defaultGenerationId,
+        "pref_default",
+      ]);
+      if (!existingPref) {
         await db.userPreferences.put({
           generationId: defaultGenerationId,
           id: "pref_default",
@@ -222,38 +257,28 @@ export async function initializeDatabase(
           revision: 1,
           schemaVersion: defaultSchemaVersion,
         });
-
-        //+_+// 5. Populate meta store
-        await db.meta.bulkPut([
-          { key: "activeProfileId", value: defaultProfileId, updatedAt: now },
-          {
-            key: "activeGenerationId",
-            value: defaultGenerationId,
-            updatedAt: now,
-          },
-          { key: "epoch", value: defaultEpoch, updatedAt: now },
-          { key: "writeFence", value: false, updatedAt: now },
-          { key: "schemaVersion", value: defaultSchemaVersion, updatedAt: now },
-        ]);
       }
-    );
 
-    return {
-      activeProfileId: defaultProfileId,
-      activeGenerationId: defaultGenerationId,
-      epoch: defaultEpoch,
-      writeFence: false,
-      schemaVersion: defaultSchemaVersion,
-    };
-  }
+      // 5. Populate meta store
+      await db.meta.bulkPut([
+        { key: "activeProfileId", value: defaultProfileId, updatedAt: now },
+        {
+          key: "activeGenerationId",
+          value: defaultGenerationId,
+          updatedAt: now,
+        },
+        { key: "epoch", value: defaultEpoch, updatedAt: now },
+        { key: "writeFence", value: false, updatedAt: now },
+        { key: "schemaVersion", value: defaultSchemaVersion, updatedAt: now },
+      ]);
 
-  return {
-    activeProfileId: String(metaMap.get("activeProfileId") ?? "p_default"),
-    activeGenerationId: String(
-      metaMap.get("activeGenerationId") ?? "g_default"
-    ),
-    epoch: Number(metaMap.get("epoch") ?? 1),
-    writeFence: Boolean(metaMap.get("writeFence") ?? false),
-    schemaVersion: Number(metaMap.get("schemaVersion") ?? 1),
-  };
+      return {
+        activeProfileId: defaultProfileId,
+        activeGenerationId: defaultGenerationId,
+        epoch: defaultEpoch,
+        writeFence: false,
+        schemaVersion: defaultSchemaVersion,
+      };
+    }
+  );
 }

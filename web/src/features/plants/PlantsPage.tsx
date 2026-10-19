@@ -1,4 +1,4 @@
-//+_+// P1 PlantsPage connected to IndexedDB for plant, location, group, and season CRUD
+//+_+// P1 PlantsPage connected to IndexedDB for plant, location, group, and season CRUD with concurrency protection
 import { useState, useId, useEffect } from "react";
 import { Link } from "react-router-dom";
 import {
@@ -20,14 +20,26 @@ import type {
   GrowingStatus,
   CycleRecord,
   EnvironmentHistoryRecord,
+  LocationRecord,
+  EnvironmentType,
+  RainfallExposure,
+  SunExposure,
 } from "../../lib/db/types";
 import { getEnvironmentHistories } from "../../lib/db/plantingRepository";
+import { getLocalDateString } from "../../lib/db/validators";
+import { AlertCircle, RefreshCw, Plus, Edit2, Trash2 } from "lucide-react";
 
 export function PlantsPage() {
   const {
+    isReady,
+    error,
     locations,
     plantings,
+    addLocation,
+    editLocation,
+    removeLocation,
     addPlanting,
+    editPlanting,
     movePlanting,
     splitPlanting,
     changeQuantity,
@@ -35,15 +47,63 @@ export function PlantsPage() {
     startNewCycle,
     finishCycle,
     getActiveCycleForPlanting,
+    refresh,
     db,
-    meta,
   } = useDb();
 
   const [selectedPlace, setSelectedPlace] = useState<string>("전체");
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
-  const [managingPlant, setManagingPlant] = useState<PlantingRecord | null>(null);
+  const [isManageLocationsOpen, setIsManageLocationsOpen] = useState(false);
+  const [managingPlantId, setManagingPlantId] = useState<string | null>(null);
+  const [plantDialogVersion, setPlantDialogVersion] = useState<number>(0);
 
-  //+_+// Filter plants by selected location label or '전체'
+  // Sync managingPlant with latest record in plantings
+  const managingPlant = managingPlantId
+    ? plantings.find((p) => p.id === managingPlantId) ?? null
+    : null;
+
+  if (error) {
+    return (
+      <PageContainer>
+        <PageHeading
+          eyebrow="우리 집 작은 정원"
+          title="내 식물"
+          description="데이터베이스를 불러오는 중 문제가 발생했습니다."
+        />
+        <section className="card space-section" role="alert">
+          <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", color: "var(--danger)" }}>
+            <AlertCircle size={20} aria-hidden="true" />
+            <h2>데이터베이스 접근 오류</h2>
+          </div>
+          <p className="field-error" style={{ marginTop: "0.5rem" }}>
+            {error.message}
+          </p>
+          <div className="button-row" style={{ marginTop: "1rem" }}>
+            <button type="button" className="button" onClick={() => refresh()}>
+              다시 시도
+            </button>
+          </div>
+        </section>
+      </PageContainer>
+    );
+  }
+
+  if (!isReady) {
+    return (
+      <PageContainer>
+        <PageHeading
+          eyebrow="우리 집 작은 정원"
+          title="내 식물"
+          description="식물 데이터를 준비하고 있습니다..."
+        />
+        <section className="card space-section">
+          <p className="muted">로컬 데이터를 준비하고 있습니다...</p>
+        </section>
+      </PageContainer>
+    );
+  }
+
+  // Filter plants by selected location label or '전체'
   const filteredPlantings = plantings.filter((plant) => {
     if (selectedPlace === "전체") return true;
     const loc = locations.find((l) => l.id === plant.locationId);
@@ -65,6 +125,13 @@ export function PlantsPage() {
           onClick={() => setIsAddModalOpen(true)}
         >
           새 식물 심기
+        </button>
+        <button
+          type="button"
+          className="button secondary"
+          onClick={() => setIsManageLocationsOpen(true)}
+        >
+          재배 장소 관리
         </button>
       </div>
 
@@ -131,13 +198,15 @@ export function PlantsPage() {
                     : `그룹 · ${plant.quantity}${plant.unit}`}
                 </p>
                 {plant.quantityChangeReason && (
-                  <p className="field-hint">{plant.quantityChangeReason}</p>
+                  <p className="field-hint" style={{ whiteSpace: "pre-line" }}>
+                    {plant.quantityChangeReason}
+                  </p>
                 )}
                 <div className="button-row" style={{ marginTop: "0.75rem" }}>
                   <button
                     type="button"
                     className="button secondary"
-                    onClick={() => setManagingPlant(plant)}
+                    onClick={() => setManagingPlantId(plant.id)}
                   >
                     관리하기
                   </button>
@@ -148,7 +217,6 @@ export function PlantsPage() {
         </section>
       )}
 
-      {/* Add Plant Modal */}
       {isAddModalOpen && (
         <AddPlantDialog
           locations={locations}
@@ -160,43 +228,69 @@ export function PlantsPage() {
         />
       )}
 
-      {/* Manage Plant Modal */}
       {managingPlant && (
         <ManagePlantDialog
+          key={`${managingPlant.id}-${plantDialogVersion}`}
           plant={managingPlant}
           locations={locations}
-          onClose={() => setManagingPlant(null)}
-          onMove={async (newLocId) => {
-            const updated = await movePlanting(managingPlant.id, newLocId);
-            setManagingPlant(updated);
+          onClose={() => setManagingPlantId(null)}
+          onEditBasicInfo={async (params) => {
+            await editPlanting(managingPlant.id, params, managingPlant.revision);
+          }}
+          onMove={async (newLocId, effectiveAt) => {
+            await movePlanting(
+              managingPlant.id,
+              newLocId,
+              effectiveAt,
+              managingPlant.revision
+            );
           }}
           onQuantityChange={async (newQty, reason) => {
-            const updated = await changeQuantity(managingPlant.id, newQty, reason);
-            setManagingPlant(updated);
+            await changeQuantity(
+              managingPlant.id,
+              newQty,
+              reason,
+              managingPlant.revision
+            );
           }}
           onSplitGroup={async (splitQty, newName, reason) => {
-            const res = await splitPlanting(
+            await splitPlanting(
               managingPlant.id,
               splitQty,
               newName,
-              reason
+              reason,
+              managingPlant.revision
             );
-            setManagingPlant(res.source);
           }}
           onDelete={async () => {
-            await removePlanting(managingPlant.id);
-            setManagingPlant(null);
+            await removePlanting(managingPlant.id, managingPlant.revision);
+            setManagingPlantId(null);
           }}
           getActiveCycle={() => getActiveCycleForPlanting(managingPlant.id)}
           onStartCycle={(startDate) => startNewCycle(managingPlant.id, startDate)}
-          onEndCycle={(cycleId, endDate) => finishCycle(cycleId, endDate)}
-          fetchHistories={() =>
-            meta ? getEnvironmentHistories(db, meta.activeGenerationId, managingPlant.id) : Promise.resolve([])
+          onEndCycle={(cycleId, endDate, expectedRev) =>
+            finishCycle(cycleId, endDate, expectedRev)
           }
+          fetchHistories={() =>
+            getEnvironmentHistories(db, managingPlant.generationId, managingPlant.id)
+          }
+          onRefreshLatest={async () => {
+            await refresh();
+            setPlantDialogVersion((v) => v + 1);
+          }}
         />
       )}
 
-      {/* Retain sample cards details for review and verification */}
+      {isManageLocationsOpen && (
+        <ManageLocationsDialog
+          locations={locations}
+          onClose={() => setIsManageLocationsOpen(false)}
+          onAddLocation={addLocation}
+          onEditLocation={editLocation}
+          onDeleteLocation={removeLocation}
+        />
+      )}
+
       <details className="sample-details space-section">
         <summary>개체·그룹 카드 구성 보기 (개발 샘플)</summary>
         <PhaseNotice>
@@ -244,9 +338,7 @@ function AddPlantDialog({
   const [selectedLocationId, setSelectedLocationId] = useState("");
   const locationId = selectedLocationId || locations[0]?.id || "";
   const [growingStatus, setGrowingStatus] = useState<GrowingStatus>("GROWING");
-  const [startLocalDate, setStartLocalDate] = useState(
-    new Date().toISOString().slice(0, 10)
-  );
+  const [startLocalDate, setStartLocalDate] = useState(() => getLocalDateString());
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
 
@@ -424,6 +516,7 @@ function ManagePlantDialog({
   plant,
   locations,
   onClose,
+  onEditBasicInfo,
   onMove,
   onQuantityChange,
   onSplitGroup,
@@ -432,24 +525,37 @@ function ManagePlantDialog({
   onStartCycle,
   onEndCycle,
   fetchHistories,
+  onRefreshLatest,
 }: {
   plant: PlantingRecord;
   locations: Array<{ id: string; label: string }>;
   onClose: () => void;
-  onMove: (newLocationId: string) => Promise<void>;
+  onEditBasicInfo: (params: {
+    displayName?: string;
+    unit?: string;
+    growingStatus?: GrowingStatus;
+  }) => Promise<void>;
+  onMove: (newLocationId: string, effectiveAt?: string) => Promise<void>;
   onQuantityChange: (newQuantity: number, reason: string) => Promise<void>;
   onSplitGroup: (splitQty: number, newName: string, reason: string) => Promise<void>;
   onDelete: () => Promise<void>;
   getActiveCycle: () => Promise<CycleRecord | undefined>;
   onStartCycle: (startDate: string) => Promise<CycleRecord>;
-  onEndCycle: (cycleId: string, endDate: string) => Promise<CycleRecord>;
+  onEndCycle: (cycleId: string, endDate: string, expectedRevision?: number) => Promise<CycleRecord>;
   fetchHistories: () => Promise<EnvironmentHistoryRecord[]>;
+  onRefreshLatest: () => Promise<void>;
 }) {
   const id = useId();
   const [activeCycle, setActiveCycle] = useState<CycleRecord | undefined>(undefined);
   const [histories, setHistories] = useState<EnvironmentHistoryRecord[]>([]);
   const [message, setMessage] = useState<string>("");
   const [errorMsg, setErrorMsg] = useState<string>("");
+  const [isConflict, setIsConflict] = useState<boolean>(false);
+
+  // Basic Info Form states
+  const [editName, setEditName] = useState(plant.displayName);
+  const [editUnit, setEditUnit] = useState(plant.unit);
+  const [editStatus, setEditStatus] = useState<GrowingStatus>(plant.growingStatus);
 
   // Sub-action states
   const [targetLocationId, setTargetLocationId] = useState(plant.locationId);
@@ -458,8 +564,8 @@ function ManagePlantDialog({
   const [splitQty, setSplitQty] = useState(1);
   const [splitName, setSplitName] = useState(`${plant.displayName} (분할)`);
   const [splitReason, setSplitReason] = useState("");
-  const [newCycleDate, setNewCycleDate] = useState(new Date().toISOString().slice(0, 10));
-  const [endCycleDate, setEndCycleDate] = useState(new Date().toISOString().slice(0, 10));
+  const [newCycleDate, setNewCycleDate] = useState(() => getLocalDateString());
+  const [endCycleDate, setEndCycleDate] = useState(() => getLocalDateString());
 
   useEffect(() => {
     getActiveCycle().then(setActiveCycle);
@@ -468,16 +574,119 @@ function ManagePlantDialog({
 
   const currentLocation = locations.find((l) => l.id === plant.locationId);
 
+  const handleConflictReload = async () => {
+    await onRefreshLatest();
+    setIsConflict(false);
+    setErrorMsg("");
+    setMessage("최신 데이터를 다시 불러왔습니다.");
+  };
+
   return (
     <ModalDialog labelledBy={`${id}-manage-title`} onClose={onClose}>
       <h2 id={`${id}-manage-title`}>{plant.displayName} 관리</h2>
-      <p className="card-summary" style={{ marginBottom: "1rem" }}>
+      <p className="card-summary" style={{ marginBottom: "0.5rem" }}>
         현재 장소: <strong>{currentLocation?.label ?? "장소 미지정"}</strong> ·{" "}
-        형태: <strong>{plant.groupType === "INDIVIDUAL" ? "개체 (1그루)" : `그룹 (${plant.quantity}${plant.unit})`}</strong>
+        형태: <strong>{plant.groupType === "INDIVIDUAL" ? "개체 (1그루)" : `그룹 (${plant.quantity}${plant.unit})`}</strong> ·{" "}
+        버전(Rev): <strong>{plant.revision}</strong>
       </p>
 
-      {message && <p className="badge badge-neutral" style={{ display: "block", marginBottom: "0.5rem" }}>{message}</p>}
-      {errorMsg && <p className="field-error" role="alert" style={{ marginBottom: "0.5rem" }}>{errorMsg}</p>}
+      {message && (
+        <p className="badge badge-neutral" style={{ display: "block", marginBottom: "0.5rem" }}>
+          {message}
+        </p>
+      )}
+
+      {errorMsg && (
+        <div style={{ marginBottom: "0.75rem" }}>
+          <p className="field-error" role="alert" style={{ marginBottom: isConflict ? "0.25rem" : "0" }}>
+            {errorMsg}
+          </p>
+          {isConflict && (
+            <button
+              type="button"
+              className="button secondary"
+              style={{ fontSize: "0.85rem", padding: "0.25rem 0.5rem", marginTop: "0.25rem" }}
+              onClick={handleConflictReload}
+            >
+              <RefreshCw size={14} aria-hidden="true" style={{ marginRight: "0.25rem" }} />
+              최신 정보 확인 및 다시 불러오기
+            </button>
+          )}
+        </div>
+      )}
+
+      {/* 0. 기본 정보 수정 */}
+      <section className="card" style={{ marginBottom: "1rem", background: "var(--background)" }}>
+        <h3>기본 정보 수정</h3>
+        <form
+          onSubmit={async (e) => {
+            e.preventDefault();
+            try {
+              setErrorMsg("");
+              setIsConflict(false);
+              await onEditBasicInfo({
+                displayName: editName,
+                unit: editUnit,
+                growingStatus: editStatus,
+              });
+              setMessage("기본 정보를 성공적으로 수정했습니다.");
+            } catch (err) {
+              const msg = err instanceof Error ? err.message : String(err);
+              setErrorMsg(msg);
+              if (err && typeof err === "object" && "name" in err && err.name === "ConflictError") {
+                setIsConflict(true);
+              }
+            }
+          }}
+          style={{ display: "flex", flexDirection: "column", gap: "0.75rem", marginTop: "0.5rem" }}
+        >
+          <div>
+            <label htmlFor={`${id}-edit-name`} style={{ display: "block", fontSize: "0.9rem", fontWeight: 600 }}>
+              식물 이름
+            </label>
+            <input
+              id={`${id}-edit-name`}
+              type="text"
+              value={editName}
+              onChange={(e) => setEditName(e.target.value)}
+              required
+            />
+          </div>
+          <div style={{ display: "flex", gap: "0.5rem" }}>
+            <div style={{ flex: 1 }}>
+              <label htmlFor={`${id}-edit-status`} style={{ display: "block", fontSize: "0.9rem", fontWeight: 600 }}>
+                생육 상태
+              </label>
+              <select
+                id={`${id}-edit-status`}
+                value={editStatus}
+                onChange={(e) => setEditStatus(e.target.value as GrowingStatus)}
+              >
+                <option value="GROWING">생육 중</option>
+                <option value="DORMANT">휴면 중</option>
+                <option value="HARVESTED">수확 완료</option>
+                <option value="DEAD">고사</option>
+              </select>
+            </div>
+            <div style={{ width: "100px" }}>
+              <label htmlFor={`${id}-edit-unit`} style={{ display: "block", fontSize: "0.9rem", fontWeight: 600 }}>
+                단위
+              </label>
+              <input
+                id={`${id}-edit-unit`}
+                type="text"
+                value={editUnit}
+                onChange={(e) => setEditUnit(e.target.value)}
+              />
+            </div>
+          </div>
+          <div className="button-row">
+            <button type="submit" className="button">
+              기본 정보 저장
+            </button>
+          </div>
+        </form>
+      </section>
 
       {/* 1. 장소 이동 */}
       <section className="card" style={{ marginBottom: "1rem", background: "var(--background)" }}>
@@ -503,11 +712,16 @@ function ManagePlantDialog({
             onClick={async () => {
               try {
                 setErrorMsg("");
+                setIsConflict(false);
                 await onMove(targetLocationId);
                 setMessage("장소를 성공적으로 이동했습니다.");
                 fetchHistories().then(setHistories);
               } catch (err) {
-                setErrorMsg(err instanceof Error ? err.message : String(err));
+                const msg = err instanceof Error ? err.message : String(err);
+                setErrorMsg(msg);
+                if (err && typeof err === "object" && "name" in err && err.name === "ConflictError") {
+                  setIsConflict(true);
+                }
               }
             }}
           >
@@ -519,7 +733,7 @@ function ManagePlantDialog({
       {/* 2. 수량 변경 */}
       <section className="card" style={{ marginBottom: "1rem", background: "var(--background)" }}>
         <h3>수량 변경</h3>
-        <p className="field-hint">개체 폐기나 추가 식재로 인한 수량 변경 시 사유를 보존합니다.</p>
+        <p className="field-hint">개체 폐기나 추가 식재로 인한 수량 변경 시 사유를 누적 보존합니다.</p>
         <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem", marginTop: "0.5rem" }}>
           <div style={{ display: "flex", gap: "0.5rem" }}>
             <input
@@ -546,11 +760,16 @@ function ManagePlantDialog({
             onClick={async () => {
               try {
                 setErrorMsg("");
+                setIsConflict(false);
                 await onQuantityChange(qtyValue, qtyReason);
                 setMessage("수량이 성공적으로 변경되었습니다.");
                 setQtyReason("");
               } catch (err) {
-                setErrorMsg(err instanceof Error ? err.message : String(err));
+                const msg = err instanceof Error ? err.message : String(err);
+                setErrorMsg(msg);
+                if (err && typeof err === "object" && "name" in err && err.name === "ConflictError") {
+                  setIsConflict(true);
+                }
               }
             }}
           >
@@ -564,7 +783,7 @@ function ManagePlantDialog({
         <section className="card" style={{ marginBottom: "1rem", background: "var(--background)" }}>
           <h3>그룹 분할</h3>
           <p className="field-hint">
-            일부 개체를 독립 분리하여 새 planting으로 생성합니다. (남은 수량: {plant.quantity - splitQty})
+            일부 개체를 독립 분리하여 새 식물로 분할 생성합니다. (남은 수량: {plant.quantity - splitQty})
           </p>
           <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem", marginTop: "0.5rem" }}>
             <div style={{ display: "flex", gap: "0.5rem" }}>
@@ -599,11 +818,16 @@ function ManagePlantDialog({
               onClick={async () => {
                 try {
                   setErrorMsg("");
+                  setIsConflict(false);
                   await onSplitGroup(splitQty, splitName, splitReason);
                   setMessage("그룹을 분할하여 새 식물을 생성했습니다.");
                   setSplitQty(1);
                 } catch (err) {
-                  setErrorMsg(err instanceof Error ? err.message : String(err));
+                  const msg = err instanceof Error ? err.message : String(err);
+                  setErrorMsg(msg);
+                  if (err && typeof err === "object" && "name" in err && err.name === "ConflictError") {
+                    setIsConflict(true);
+                  }
                 }
               }}
             >
@@ -619,7 +843,7 @@ function ManagePlantDialog({
         {activeCycle ? (
           <div>
             <p>
-              현재 진행 중인 시즌: <strong>{activeCycle.startLocalDate} 시작</strong>
+              현재 진행 중인 시즌: <strong>{activeCycle.startLocalDate} 시작</strong> (Rev: {activeCycle.revision})
             </p>
             <div style={{ display: "flex", gap: "0.5rem", marginTop: "0.5rem" }}>
               <input
@@ -634,11 +858,16 @@ function ManagePlantDialog({
                 onClick={async () => {
                   try {
                     setErrorMsg("");
-                    await onEndCycle(activeCycle.id, endCycleDate);
-                    setMessage("시즌을 종료했습니다.");
+                    setIsConflict(false);
+                    await onEndCycle(activeCycle.id, endCycleDate, activeCycle.revision);
+                    setMessage("시즌을 성공적으로 종료했습니다.");
                     getActiveCycle().then(setActiveCycle);
                   } catch (err) {
-                    setErrorMsg(err instanceof Error ? err.message : String(err));
+                    const msg = err instanceof Error ? err.message : String(err);
+                    setErrorMsg(msg);
+                    if (err && typeof err === "object" && "name" in err && err.name === "ConflictError") {
+                      setIsConflict(true);
+                    }
                   }
                 }}
               >
@@ -662,11 +891,16 @@ function ManagePlantDialog({
                 onClick={async () => {
                   try {
                     setErrorMsg("");
+                    setIsConflict(false);
                     await onStartCycle(newCycleDate);
                     setMessage("새 시즌을 시작했습니다.");
                     getActiveCycle().then(setActiveCycle);
                   } catch (err) {
-                    setErrorMsg(err instanceof Error ? err.message : String(err));
+                    const msg = err instanceof Error ? err.message : String(err);
+                    setErrorMsg(msg);
+                    if (err && typeof err === "object" && "name" in err && err.name === "ConflictError") {
+                      setIsConflict(true);
+                    }
                   }
                 }}
               >
@@ -692,7 +926,19 @@ function ManagePlantDialog({
         </details>
       )}
 
-      {/* 6. 식물 삭제 (휴지통) */}
+      {/* 6. 수량 변경 사유 이력 */}
+      {plant.quantityChangeReason && (
+        <details style={{ marginBottom: "1rem" }}>
+          <summary>수량 변경 감사 이력</summary>
+          <div style={{ background: "var(--background)", padding: "0.5rem", borderRadius: "4px", marginTop: "0.5rem" }}>
+            <pre style={{ margin: 0, fontSize: "0.85rem", whiteSpace: "pre-wrap" }}>
+              {plant.quantityChangeReason}
+            </pre>
+          </div>
+        </details>
+      )}
+
+      {/* 7. 식물 삭제 (휴지통) */}
       <div className="button-row" style={{ marginTop: "1rem" }}>
         <button
           type="button"
@@ -700,7 +946,15 @@ function ManagePlantDialog({
           style={{ color: "var(--danger)" }}
           onClick={async () => {
             if (window.confirm(`'${plant.displayName}' 식물을 휴지통으로 이동할까요?`)) {
-              await onDelete();
+              try {
+                await onDelete();
+              } catch (err) {
+                const msg = err instanceof Error ? err.message : String(err);
+                setErrorMsg(msg);
+                if (err && typeof err === "object" && "name" in err && err.name === "ConflictError") {
+                  setIsConflict(true);
+                }
+              }
             }
           }}
         >
@@ -710,6 +964,326 @@ function ManagePlantDialog({
           닫기
         </button>
       </div>
+    </ModalDialog>
+  );
+}
+
+//+_+// Manage Locations Modal Dialog Component
+function ManageLocationsDialog({
+  locations,
+  onClose,
+  onAddLocation,
+  onEditLocation,
+  onDeleteLocation,
+}: {
+  locations: LocationRecord[];
+  onClose: () => void;
+  onAddLocation: (params: {
+    label: string;
+    environmentType: EnvironmentType;
+    rainfallExposure: RainfallExposure;
+    sunExposure: SunExposure;
+    timeZone?: string;
+  }) => Promise<LocationRecord>;
+  onEditLocation: (
+    id: string,
+    params: {
+      label?: string;
+      environmentType?: EnvironmentType;
+      rainfallExposure?: RainfallExposure;
+      sunExposure?: SunExposure;
+      timeZone?: string;
+      expectedRevision?: number;
+    },
+    expectedRevision?: number
+  ) => Promise<LocationRecord>;
+  onDeleteLocation: (id: string, expectedRevision?: number) => Promise<void>;
+}) {
+  const id = useId();
+  const [isAddOpen, setIsAddOpen] = useState(false);
+  const [editingLoc, setEditingLoc] = useState<LocationRecord | null>(null);
+  const [errorMsg, setErrorMsg] = useState("");
+  const [actionMsg, setActionMsg] = useState("");
+
+  return (
+    <ModalDialog labelledBy={`${id}-loc-manage-title`} onClose={onClose}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.5rem" }}>
+        <h2 id={`${id}-loc-manage-title`}>재배 장소 관리</h2>
+        <button
+          type="button"
+          className="button secondary"
+          style={{ fontSize: "0.85rem", padding: "0.35rem 0.6rem" }}
+          onClick={() => {
+            setErrorMsg("");
+            setActionMsg("");
+            setIsAddOpen(true);
+          }}
+        >
+          <Plus size={15} aria-hidden="true" style={{ marginRight: "0.2rem" }} />
+          새 장소 추가
+        </button>
+      </div>
+
+      <p className="field-hint" style={{ marginBottom: "1rem" }}>
+        식물이 자라는 공간의 빛, 비, 실내외 환경을 설정하고 관리합니다.
+      </p>
+
+      {actionMsg && (
+        <p className="badge badge-neutral" style={{ display: "block", marginBottom: "0.75rem" }}>
+          {actionMsg}
+        </p>
+      )}
+
+      {errorMsg && (
+        <p className="field-error" role="alert" style={{ marginBottom: "0.75rem" }}>
+          {errorMsg}
+        </p>
+      )}
+
+      {locations.length === 0 ? (
+        <p style={{ color: "var(--muted)", margin: "1rem 0" }}>등록된 장소가 없습니다.</p>
+      ) : (
+        <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem", marginBottom: "1rem" }}>
+          {locations.map((loc) => (
+            <div
+              key={loc.id}
+              className="card"
+              style={{
+                background: "var(--background)",
+                padding: "0.75rem 1rem",
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+              }}
+            >
+              <div>
+                <strong>{loc.label}</strong>
+                <span className="field-hint" style={{ display: "block" }}>
+                  {loc.environmentType} · {loc.sunExposure} · {loc.rainfallExposure} · {loc.timeZone} (Rev: {loc.revision})
+                </span>
+              </div>
+              <div className="button-row">
+                <button
+                  type="button"
+                  className="button secondary"
+                  style={{ padding: "0.3rem 0.5rem" }}
+                  aria-label={`${loc.label} 수정`}
+                  onClick={() => {
+                    setErrorMsg("");
+                    setActionMsg("");
+                    setEditingLoc(loc);
+                  }}
+                >
+                  <Edit2 size={14} aria-hidden="true" />
+                </button>
+                <button
+                  type="button"
+                  className="button secondary"
+                  style={{ padding: "0.3rem 0.5rem", color: "var(--danger)" }}
+                  aria-label={`${loc.label} 삭제`}
+                  onClick={async () => {
+                    if (window.confirm(`'${loc.label}' 장소를 휴지통으로 이동하시겠습니까?`)) {
+                      try {
+                        setErrorMsg("");
+                        await onDeleteLocation(loc.id, loc.revision);
+                        setActionMsg(`'${loc.label}' 장소를 휴지통으로 이동했습니다.`);
+                      } catch (err) {
+                        setErrorMsg(err instanceof Error ? err.message : String(err));
+                      }
+                    }
+                  }}
+                >
+                  <Trash2 size={14} aria-hidden="true" />
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      <div className="button-row">
+        <button type="button" className="button" onClick={onClose}>
+          닫기
+        </button>
+      </div>
+
+      {isAddOpen && (
+        <LocationFormDialog
+          title="새 재배 장소 등록"
+          onClose={() => setIsAddOpen(false)}
+          onSubmit={async (values) => {
+            await onAddLocation(values);
+            setActionMsg(`'${values.label}' 장소를 등록했습니다.`);
+            setIsAddOpen(false);
+          }}
+        />
+      )}
+
+      {editingLoc && (
+        <LocationFormDialog
+          title="재배 장소 수정"
+          initialValues={editingLoc}
+          onClose={() => setEditingLoc(null)}
+          onSubmit={async (values) => {
+            await onEditLocation(editingLoc.id, values, editingLoc.revision);
+            setActionMsg(`'${values.label}' 장소를 수정했습니다.`);
+            setEditingLoc(null);
+          }}
+        />
+      )}
+    </ModalDialog>
+  );
+}
+
+//+_+// Reusable Location Form Dialog Component
+function LocationFormDialog({
+  title,
+  initialValues,
+  onClose,
+  onSubmit,
+}: {
+  title: string;
+  initialValues?: LocationRecord;
+  onClose: () => void;
+  onSubmit: (values: {
+    label: string;
+    environmentType: EnvironmentType;
+    rainfallExposure: RainfallExposure;
+    sunExposure: SunExposure;
+    timeZone: string;
+  }) => Promise<void>;
+}) {
+  const id = useId();
+  const [label, setLabel] = useState(initialValues?.label ?? "");
+  const [environmentType, setEnvironmentType] = useState<EnvironmentType>(
+    initialValues?.environmentType ?? "INDOOR"
+  );
+  const [rainfallExposure, setRainfallExposure] = useState<RainfallExposure>(
+    initialValues?.rainfallExposure ?? "COVERED"
+  );
+  const [sunExposure, setSunExposure] = useState<SunExposure>(
+    initialValues?.sunExposure ?? "PARTIAL_SUN"
+  );
+  const [timeZone, setTimeZone] = useState(initialValues?.timeZone ?? "Asia/Seoul");
+  const [errorMsg, setErrorMsg] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!label.trim()) {
+      setErrorMsg("장소 이름을 입력해 주세요.");
+      return;
+    }
+    try {
+      setIsSubmitting(true);
+      setErrorMsg("");
+      await onSubmit({
+        label: label.trim(),
+        environmentType,
+        rainfallExposure,
+        sunExposure,
+        timeZone: timeZone.trim(),
+      });
+    } catch (err) {
+      setErrorMsg(err instanceof Error ? err.message : String(err));
+      setIsSubmitting(false);
+    }
+  };
+
+  return (
+    <ModalDialog labelledBy={`${id}-loc-title`} onClose={onClose}>
+      <h2 id={`${id}-loc-title`}>{title}</h2>
+      <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
+        {errorMsg && (
+          <p className="field-error" role="alert">
+            {errorMsg}
+          </p>
+        )}
+        <div>
+          <label htmlFor={`${id}-label`} style={{ display: "block", fontWeight: 600, marginBottom: "0.25rem" }}>
+            장소 이름 *
+          </label>
+          <input
+            id={`${id}-label`}
+            type="text"
+            value={label}
+            onChange={(e) => setLabel(e.target.value)}
+            placeholder="예: 거실 창가, 베란다 정원, 뒷마당"
+            required
+            autoFocus
+          />
+        </div>
+
+        <div>
+          <label htmlFor={`${id}-envType`} style={{ display: "block", fontWeight: 600, marginBottom: "0.25rem" }}>
+            공간 환경 유형
+          </label>
+          <select
+            id={`${id}-envType`}
+            value={environmentType}
+            onChange={(e) => setEnvironmentType(e.target.value as EnvironmentType)}
+          >
+            <option value="INDOOR">실내 (INDOOR)</option>
+            <option value="BALCONY">베란다 (BALCONY)</option>
+            <option value="OUTDOOR">야외/마당 (OUTDOOR)</option>
+            <option value="GREENHOUSE">온실 (GREENHOUSE)</option>
+          </select>
+        </div>
+
+        <div>
+          <label htmlFor={`${id}-sun`} style={{ display: "block", fontWeight: 600, marginBottom: "0.25rem" }}>
+            일조 조건
+          </label>
+          <select
+            id={`${id}-sun`}
+            value={sunExposure}
+            onChange={(e) => setSunExposure(e.target.value as SunExposure)}
+          >
+            <option value="FULL_SUN">양지 (하루 종일 햇빛)</option>
+            <option value="PARTIAL_SUN">반양지 (하루 3~5시간 햇빛)</option>
+            <option value="SHADE">음지 (간접광)</option>
+            <option value="ARTIFICIAL">식물생장등/인공조명</option>
+          </select>
+        </div>
+
+        <div>
+          <label htmlFor={`${id}-rain`} style={{ display: "block", fontWeight: 600, marginBottom: "0.25rem" }}>
+            강수 노출
+          </label>
+          <select
+            id={`${id}-rain`}
+            value={rainfallExposure}
+            onChange={(e) => setRainfallExposure(e.target.value as RainfallExposure)}
+          >
+            <option value="COVERED">지붕/실내 (비 안 맞음)</option>
+            <option value="EXPOSED">완전 노출 (자연 강우)</option>
+            <option value="SHELTERED">일부 차양</option>
+          </select>
+        </div>
+
+        <div>
+          <label htmlFor={`${id}-tz`} style={{ display: "block", fontWeight: 600, marginBottom: "0.25rem" }}>
+            시간대 (IANA)
+          </label>
+          <input
+            id={`${id}-tz`}
+            type="text"
+            value={timeZone}
+            onChange={(e) => setTimeZone(e.target.value)}
+            placeholder="Asia/Seoul"
+            required
+          />
+        </div>
+
+        <div className="button-row" style={{ marginTop: "0.5rem" }}>
+          <button type="button" className="button secondary" onClick={onClose} disabled={isSubmitting}>
+            취소
+          </button>
+          <button type="submit" className="button" disabled={isSubmitting}>
+            {isSubmitting ? "저장 중..." : "장소 저장"}
+          </button>
+        </div>
+      </form>
     </ModalDialog>
   );
 }

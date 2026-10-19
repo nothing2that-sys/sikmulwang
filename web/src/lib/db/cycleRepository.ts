@@ -1,8 +1,9 @@
-//+_+// Cycle repository enforcing single-active-cycle invariant per planting
+//+_+// Cycle repository enforcing single-active-cycle invariant per planting and date validation
 import type { SikmulwangDB } from "./database";
 import type { CycleRecord } from "./types";
 import { withWriteTransaction } from "./transaction";
-import { NotFoundError, ValidationError } from "./errors";
+import { ConflictError, NotFoundError, ValidationError } from "./errors";
+import { validateDateRange, validateLocalDate, validateTimeZone } from "./validators";
 
 export interface StartCycleParams {
   plantingId: string;
@@ -13,6 +14,7 @@ export interface StartCycleParams {
 export interface EndCycleParams {
   cycleId: string;
   endLocalDate: string;
+  expectedRevision?: number;
 }
 
 export async function listCyclesByPlanting(
@@ -59,9 +61,9 @@ export async function startCycle(
   sessionGenerationId: string,
   params: StartCycleParams
 ): Promise<CycleRecord> {
-  if (!params.startLocalDate) {
-    throw new ValidationError("시즌 시작 날짜를 입력해 주세요.");
-  }
+  validateLocalDate(params.startLocalDate, "시즌 시작 날짜");
+  const tz = params.timeZone ?? "Asia/Seoul";
+  validateTimeZone(tz);
 
   const id = `cyc_${crypto.randomUUID()}`;
 
@@ -71,10 +73,13 @@ export async function startCycle(
     sessionEpoch,
     sessionGenerationId,
     async ({ generationId, nowUtc }) => {
-      //+_+// 1. Verify planting exists
+      //+_+// 1. Verify planting exists and is active
       const planting = await db.plantings.get([generationId, params.plantingId]);
       if (!planting || planting.recordStatus === "PURGED") {
         throw new NotFoundError(`식물을 찾을 수 없습니다: ${params.plantingId}`);
+      }
+      if (planting.recordStatus === "TRASHED") {
+        throw new ValidationError("휴지통에 있는 식물에는 새 시즌을 시작할 수 없습니다.");
       }
 
       //+_+// 2. Check single active cycle invariant
@@ -101,7 +106,7 @@ export async function startCycle(
         plantingId: params.plantingId,
         startLocalDate: params.startLocalDate,
         endLocalDate: null,
-        timeZone: params.timeZone ?? "Asia/Seoul",
+        timeZone: tz,
         status: "ACTIVE",
         recordStatus: "ACTIVE",
         createdAt: nowUtc,
@@ -122,9 +127,7 @@ export async function endCycle(
   sessionGenerationId: string,
   params: EndCycleParams
 ): Promise<CycleRecord> {
-  if (!params.endLocalDate) {
-    throw new ValidationError("시즌 종료 날짜를 입력해 주세요.");
-  }
+  validateLocalDate(params.endLocalDate, "시즌 종료 날짜");
 
   return await withWriteTransaction(
     db,
@@ -139,6 +142,20 @@ export async function endCycle(
       if (existing.status === "ENDED") {
         throw new ValidationError("이미 종료된 시즌입니다.");
       }
+
+      if (
+        params.expectedRevision !== undefined &&
+        existing.revision !== params.expectedRevision
+      ) {
+        throw new ConflictError(
+          `시즌 종료 충돌: 현재 revision(${existing.revision})이 기대값(${params.expectedRevision})과 다릅니다.`,
+          existing.revision,
+          params.expectedRevision
+        );
+      }
+
+      // Ensure endLocalDate is not before startLocalDate
+      validateDateRange(existing.startLocalDate, params.endLocalDate, "시즌");
 
       const updated: CycleRecord = {
         ...existing,

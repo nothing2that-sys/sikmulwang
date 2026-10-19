@@ -213,4 +213,128 @@ test.describe("P1 Local Data Foundation — UI & Persistence", () => {
     //+_+// Restore online state
     await context.setOffline(false);
   });
+
+  test("handles multi-tab concurrency conflict and allows conflict recovery", async ({
+    page,
+    context,
+  }) => {
+    //+_+// Open Tab 1 and register a plant
+    await page.goto("/plants");
+    await page.getByRole("button", { name: "새 식물 심기" }).click();
+    await page.getByLabel("식물 이름 (애칭 또는 품종) *").fill("동시성 테스트 바질");
+    await page.getByRole("button", { name: "식물 등록 완료" }).click();
+
+    await expect(
+      page.getByRole("heading", { name: "동시성 테스트 바질", exact: true })
+    ).toBeVisible();
+
+    //+_+// Open Tab 2 with same context
+    const page2 = await context.newPage();
+    await page2.goto("/plants");
+    await expect(
+      page2.getByRole("heading", { name: "동시성 테스트 바질", exact: true })
+    ).toBeVisible();
+
+    //+_+// Open manage modal on Tab 1
+    await page.getByRole("button", { name: "관리하기" }).click();
+    await expect(
+      page.getByRole("heading", { name: "동시성 테스트 바질 관리" })
+    ).toBeVisible();
+
+    //+_+// Open manage modal on Tab 2
+    await page2.getByRole("button", { name: "관리하기" }).click();
+    await expect(
+      page2.getByRole("heading", { name: "동시성 테스트 바질 관리" })
+    ).toBeVisible();
+
+    //+_+// On Tab 1: edit basic info and save (advancing revision from 1 to 2)
+    await page.getByLabel("식물 이름").fill("동시성 바질 (수정됨)");
+    await page.getByRole("button", { name: "기본 정보 저장" }).click();
+    await expect(page.getByText("기본 정보를 성공적으로 수정했습니다.")).toBeVisible();
+
+    //+_+// On Tab 2: try to edit basic info with stale revision 1
+    await page2.getByLabel("식물 이름").fill("동시성 바질 충돌 시도");
+    await page2.getByRole("button", { name: "기본 정보 저장" }).click();
+
+    //+_+// Tab 2 receives optimistic concurrency conflict error
+    await expect(page2.getByRole("alert")).toContainText("식물 수정 충돌");
+    await expect(
+      page2.getByRole("button", { name: "최신 정보 확인 및 다시 불러오기" })
+    ).toBeVisible();
+
+    //+_+// Tab 2 clicks refresh button to reload latest version (rev 2)
+    await page2.getByRole("button", { name: "최신 정보 확인 및 다시 불러오기" }).click();
+    await expect(
+      page2.getByRole("heading", { name: "동시성 바질 (수정됨) 관리" })
+    ).toBeVisible();
+
+    //+_+// Tab 2 now saves successfully
+    await page2.getByLabel("식물 이름").fill("동시성 바질 (최종 해결)");
+    await page2.getByRole("button", { name: "기본 정보 저장" }).click();
+    await expect(
+      page2.getByText("기본 정보를 성공적으로 수정했습니다.")
+    ).toBeVisible();
+
+    await page2.close();
+  });
+
+  test("manages custom locations and blocks deletion when referenced by plants", async ({
+    page,
+  }) => {
+    await page.goto("/plants");
+
+    //+_+// Open Location Management dialog
+    await page.getByRole("button", { name: "재배 장소 관리" }).click();
+    const locDialog = page.getByRole("dialog", { name: "재배 장소 관리" });
+    await expect(locDialog).toBeVisible();
+
+    //+_+// Click Add Location
+    await page.getByRole("button", { name: "새 장소 추가" }).click();
+    await expect(
+      page.getByRole("heading", { name: "새 재배 장소 등록" })
+    ).toBeVisible();
+
+    //+_+// Fill custom location
+    await page.getByLabel("장소 이름 *").fill("옥상 정원 테스트");
+    await page.getByLabel("공간 환경 유형").selectOption("OUTDOOR");
+    await page.getByRole("button", { name: "장소 저장" }).click();
+
+    //+_+// Verify location is listed
+    await expect(
+      locDialog.getByRole("strong").filter({ hasText: "옥상 정원 테스트" })
+    ).toBeVisible();
+
+    //+_+// Close Location dialog
+    await page.getByRole("button", { name: "닫기" }).click();
+
+    //+_+// Register a plant at this new location
+    await page.getByRole("button", { name: "새 식물 심기" }).click();
+    await page.getByLabel("식물 이름 (애칭 또는 품종) *").fill("옥상 로즈마리");
+    await page
+      .getByLabel("재배 장소 *")
+      .selectOption({ label: "옥상 정원 테스트" });
+    await page.getByRole("button", { name: "식물 등록 완료" }).click();
+
+    await expect(
+      page.getByRole("heading", { name: "옥상 로즈마리", exact: true })
+    ).toBeVisible();
+    await expect(
+      page.locator(".plant-card").getByText("옥상 정원 테스트")
+    ).toBeVisible();
+
+    //+_+// Try to delete the location that is in use
+    await page.getByRole("button", { name: "재배 장소 관리" }).click();
+    page.once("dialog", (dialog) => dialog.accept());
+    await locDialog.getByLabel("옥상 정원 테스트 삭제").click();
+
+    //+_+// Verify deletion is blocked with reference error
+    await expect(
+      locDialog.getByRole("alert")
+    ).toContainText("사용 중인 식물");
+
+    //+_+// Verify location is still present
+    await expect(
+      locDialog.getByRole("strong").filter({ hasText: "옥상 정원 테스트" })
+    ).toBeVisible();
+  });
 });

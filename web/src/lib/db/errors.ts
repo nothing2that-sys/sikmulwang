@@ -27,3 +27,14 @@ export class NotFoundError extends Error {
     this.name = "NotFoundError";
   }
 }
+
+export class ConflictError extends Error {
+  constructor(
+    message = "다른 탭이나 창에서 데이터가 이미 수정되었습니다. 최신 데이터를 확인한 후 다시 시도해 주세요.",
+    public readonly currentRevision?: number,
+    public readonly expectedRevision?: number
+  ) {
+    super(message);
+    this.name = "ConflictError";
+  }
+}

@@ -1,4 +1,4 @@
-//+_+// React Context providing reactive IndexedDB state and actions
+//+_+// React Context providing reactive IndexedDB state and actions with optimistic concurrency and error resilience
 import {
   createContext,
   useContext,
@@ -22,6 +22,8 @@ import {
   createLocation,
   updateLocation,
   trashLocation,
+  restoreLocation,
+  purgeLocation,
   type CreateLocationParams,
   type UpdateLocationParams,
 } from "./locationRepository";
@@ -56,33 +58,61 @@ export interface DbContextValue {
   db: SikmulwangDB;
   meta: SystemMetaState | null;
   locations: LocationRecord[];
+  trashedLocations: LocationRecord[];
   plantings: PlantingRecord[];
   trashedPlantings: PlantingRecord[];
   refresh: () => Promise<void>;
 
   //+_+// Location actions
   addLocation: (params: CreateLocationParams) => Promise<LocationRecord>;
-  editLocation: (id: string, params: UpdateLocationParams) => Promise<LocationRecord>;
-  removeLocation: (id: string) => Promise<void>;
+  editLocation: (
+    id: string,
+    params: UpdateLocationParams,
+    expectedRevision?: number
+  ) => Promise<LocationRecord>;
+  removeLocation: (id: string, expectedRevision?: number) => Promise<void>;
+  restoreLocationItem: (id: string, expectedRevision?: number) => Promise<void>;
+  purgeLocationItem: (id: string, expectedRevision?: number) => Promise<void>;
 
   //+_+// Planting actions
-  addPlanting: (params: CreatePlantingParams) => Promise<{ planting: PlantingRecord; cycle?: CycleRecord }>;
-  editPlanting: (id: string, params: UpdatePlantingParams) => Promise<PlantingRecord>;
-  movePlanting: (id: string, newLocationId: string) => Promise<PlantingRecord>;
+  addPlanting: (
+    params: CreatePlantingParams
+  ) => Promise<{ planting: PlantingRecord; cycle?: CycleRecord }>;
+  editPlanting: (
+    id: string,
+    params: UpdatePlantingParams,
+    expectedRevision?: number
+  ) => Promise<PlantingRecord>;
+  movePlanting: (
+    id: string,
+    newLocationId: string,
+    effectiveAt?: string,
+    expectedRevision?: number
+  ) => Promise<PlantingRecord>;
   splitPlanting: (
     id: string,
     splitQuantity: number,
     newDisplayName?: string,
-    reason?: string
+    reason?: string,
+    expectedRevision?: number
   ) => Promise<{ source: PlantingRecord; split: PlantingRecord }>;
-  changeQuantity: (id: string, newQuantity: number, reason: string) => Promise<PlantingRecord>;
-  removePlanting: (id: string) => Promise<void>;
-  restorePlantingItem: (id: string) => Promise<void>;
-  purgePlantingItem: (id: string) => Promise<void>;
+  changeQuantity: (
+    id: string,
+    newQuantity: number,
+    reason: string,
+    expectedRevision?: number
+  ) => Promise<PlantingRecord>;
+  removePlanting: (id: string, expectedRevision?: number) => Promise<void>;
+  restorePlantingItem: (id: string, expectedRevision?: number) => Promise<void>;
+  purgePlantingItem: (id: string, expectedRevision?: number) => Promise<void>;
 
   //+_+// Cycle actions
   startNewCycle: (plantingId: string, startLocalDate: string) => Promise<CycleRecord>;
-  finishCycle: (cycleId: string, endLocalDate: string) => Promise<CycleRecord>;
+  finishCycle: (
+    cycleId: string,
+    endLocalDate: string,
+    expectedRevision?: number
+  ) => Promise<CycleRecord>;
   getActiveCycleForPlanting: (plantingId: string) => Promise<CycleRecord | undefined>;
   getCyclesForPlanting: (plantingId: string) => Promise<CycleRecord[]>;
 
@@ -98,23 +128,26 @@ export function DbProvider({ children }: { children: ReactNode }) {
   const [error, setError] = useState<Error | null>(null);
   const [meta, setMeta] = useState<SystemMetaState | null>(null);
   const [locations, setLocations] = useState<LocationRecord[]>([]);
+  const [trashedLocations, setTrashedLocations] = useState<LocationRecord[]>([]);
   const [plantings, setPlantings] = useState<PlantingRecord[]>([]);
   const [trashedPlantings, setTrashedPlantings] = useState<PlantingRecord[]>([]);
 
   const loadData = useCallback(async () => {
     try {
+      setError(null);
       const initMeta = await initializeDatabase(db);
       const currentMeta = await getSystemMeta(db);
       const activeGen = currentMeta.activeGenerationId || initMeta.activeGenerationId;
 
-      const [locs, activePlts, allPlts] = await Promise.all([
-        listLocations(db, activeGen),
+      const [allLocs, activePlts, allPlts] = await Promise.all([
+        listLocations(db, activeGen, { includeTrashed: true }),
         listPlantings(db, activeGen, { includeTrashed: false }),
         listPlantings(db, activeGen, { includeTrashed: true }),
       ]);
 
       setMeta(currentMeta);
-      setLocations(locs);
+      setLocations(allLocs.filter((l) => l.recordStatus === "ACTIVE"));
+      setTrashedLocations(allLocs.filter((l) => l.recordStatus === "TRASHED"));
       setPlantings(activePlts);
       setTrashedPlantings(allPlts.filter((p) => p.recordStatus === "TRASHED"));
       setIsReady(true);
@@ -132,15 +165,16 @@ export function DbProvider({ children }: { children: ReactNode }) {
         const activeGen =
           currentMeta.activeGenerationId || initMeta.activeGenerationId;
 
-        const [locs, activePlts, allPlts] = await Promise.all([
-          listLocations(db, activeGen),
+        const [allLocs, activePlts, allPlts] = await Promise.all([
+          listLocations(db, activeGen, { includeTrashed: true }),
           listPlantings(db, activeGen, { includeTrashed: false }),
           listPlantings(db, activeGen, { includeTrashed: true }),
         ]);
 
         if (!mounted) return;
         setMeta(currentMeta);
-        setLocations(locs);
+        setLocations(allLocs.filter((l) => l.recordStatus === "ACTIVE"));
+        setTrashedLocations(allLocs.filter((l) => l.recordStatus === "TRASHED"));
         setPlantings(activePlts);
         setTrashedPlantings(allPlts.filter((p) => p.recordStatus === "TRASHED"));
         setIsReady(true);
@@ -150,8 +184,24 @@ export function DbProvider({ children }: { children: ReactNode }) {
       }
     })();
 
+    //+_+// Listen for database version changes across tabs
+    const handleVersionChange = () => {
+      setError(
+        new Error(
+          "다른 탭에서 데이터베이스 버전이 갱신되었습니다. 최신 버전을 적용하기 위해 페이지를 새로고침해 주세요."
+        )
+      );
+    };
+
+    if (db.on) {
+      db.on("versionchange", handleVersionChange);
+    }
+
     return () => {
       mounted = false;
+      if (db.on) {
+        db.on.versionchange.unsubscribe(handleVersionChange);
+      }
     };
   }, [db]);
 
@@ -171,14 +221,18 @@ export function DbProvider({ children }: { children: ReactNode }) {
   );
 
   const editLocation = useCallback(
-    async (id: string, params: UpdateLocationParams) => {
+    async (
+      id: string,
+      params: UpdateLocationParams,
+      expectedRevision?: number
+    ) => {
       if (!meta) throw new Error("데이터베이스가 초기화되지 않았습니다.");
       const res = await updateLocation(
         db,
         meta.epoch,
         meta.activeGenerationId,
         id,
-        params
+        { ...params, expectedRevision }
       );
       await loadData();
       return res;
@@ -187,9 +241,45 @@ export function DbProvider({ children }: { children: ReactNode }) {
   );
 
   const removeLocation = useCallback(
-    async (id: string) => {
+    async (id: string, expectedRevision?: number) => {
       if (!meta) throw new Error("데이터베이스가 초기화되지 않았습니다.");
-      await trashLocation(db, meta.epoch, meta.activeGenerationId, id);
+      await trashLocation(
+        db,
+        meta.epoch,
+        meta.activeGenerationId,
+        id,
+        expectedRevision
+      );
+      await loadData();
+    },
+    [db, meta, loadData]
+  );
+
+  const restoreLocationItem = useCallback(
+    async (id: string, expectedRevision?: number) => {
+      if (!meta) throw new Error("데이터베이스가 초기화되지 않았습니다.");
+      await restoreLocation(
+        db,
+        meta.epoch,
+        meta.activeGenerationId,
+        id,
+        expectedRevision
+      );
+      await loadData();
+    },
+    [db, meta, loadData]
+  );
+
+  const purgeLocationItem = useCallback(
+    async (id: string, expectedRevision?: number) => {
+      if (!meta) throw new Error("데이터베이스가 초기화되지 않았습니다.");
+      await purgeLocation(
+        db,
+        meta.epoch,
+        meta.activeGenerationId,
+        id,
+        expectedRevision
+      );
       await loadData();
     },
     [db, meta, loadData]
@@ -211,14 +301,18 @@ export function DbProvider({ children }: { children: ReactNode }) {
   );
 
   const editPlanting = useCallback(
-    async (id: string, params: UpdatePlantingParams) => {
+    async (
+      id: string,
+      params: UpdatePlantingParams,
+      expectedRevision?: number
+    ) => {
       if (!meta) throw new Error("데이터베이스가 초기화되지 않았습니다.");
       const res = await updatePlanting(
         db,
         meta.epoch,
         meta.activeGenerationId,
         id,
-        params
+        { ...params, expectedRevision }
       );
       await loadData();
       return res;
@@ -227,14 +321,21 @@ export function DbProvider({ children }: { children: ReactNode }) {
   );
 
   const movePlanting = useCallback(
-    async (id: string, newLocationId: string) => {
+    async (
+      id: string,
+      newLocationId: string,
+      effectiveAt?: string,
+      expectedRevision?: number
+    ) => {
       if (!meta) throw new Error("데이터베이스가 초기화되지 않았습니다.");
       const res = await movePlantingLocation(
         db,
         meta.epoch,
         meta.activeGenerationId,
         id,
-        newLocationId
+        newLocationId,
+        effectiveAt,
+        expectedRevision
       );
       await loadData();
       return res;
@@ -247,7 +348,8 @@ export function DbProvider({ children }: { children: ReactNode }) {
       id: string,
       splitQuantity: number,
       newDisplayName?: string,
-      reason?: string
+      reason?: string,
+      expectedRevision?: number
     ) => {
       if (!meta) throw new Error("데이터베이스가 초기화되지 않았습니다.");
       const res = await splitPlantingGroup(
@@ -257,7 +359,8 @@ export function DbProvider({ children }: { children: ReactNode }) {
         id,
         splitQuantity,
         newDisplayName,
-        reason
+        reason,
+        expectedRevision
       );
       await loadData();
       return res;
@@ -266,7 +369,12 @@ export function DbProvider({ children }: { children: ReactNode }) {
   );
 
   const changeQuantity = useCallback(
-    async (id: string, newQuantity: number, reason: string) => {
+    async (
+      id: string,
+      newQuantity: number,
+      reason: string,
+      expectedRevision?: number
+    ) => {
       if (!meta) throw new Error("데이터베이스가 초기화되지 않았습니다.");
       const res = await changePlantingQuantity(
         db,
@@ -274,7 +382,8 @@ export function DbProvider({ children }: { children: ReactNode }) {
         meta.activeGenerationId,
         id,
         newQuantity,
-        reason
+        reason,
+        expectedRevision
       );
       await loadData();
       return res;
@@ -283,27 +392,45 @@ export function DbProvider({ children }: { children: ReactNode }) {
   );
 
   const removePlanting = useCallback(
-    async (id: string) => {
+    async (id: string, expectedRevision?: number) => {
       if (!meta) throw new Error("데이터베이스가 초기화되지 않았습니다.");
-      await trashPlanting(db, meta.epoch, meta.activeGenerationId, id);
+      await trashPlanting(
+        db,
+        meta.epoch,
+        meta.activeGenerationId,
+        id,
+        expectedRevision
+      );
       await loadData();
     },
     [db, meta, loadData]
   );
 
   const restorePlantingItem = useCallback(
-    async (id: string) => {
+    async (id: string, expectedRevision?: number) => {
       if (!meta) throw new Error("데이터베이스가 초기화되지 않았습니다.");
-      await restorePlanting(db, meta.epoch, meta.activeGenerationId, id);
+      await restorePlanting(
+        db,
+        meta.epoch,
+        meta.activeGenerationId,
+        id,
+        expectedRevision
+      );
       await loadData();
     },
     [db, meta, loadData]
   );
 
   const purgePlantingItem = useCallback(
-    async (id: string) => {
+    async (id: string, expectedRevision?: number) => {
       if (!meta) throw new Error("데이터베이스가 초기화되지 않았습니다.");
-      await purgePlanting(db, meta.epoch, meta.activeGenerationId, id);
+      await purgePlanting(
+        db,
+        meta.epoch,
+        meta.activeGenerationId,
+        id,
+        expectedRevision
+      );
       await loadData();
     },
     [db, meta, loadData]
@@ -328,7 +455,11 @@ export function DbProvider({ children }: { children: ReactNode }) {
   );
 
   const finishCycle = useCallback(
-    async (cycleId: string, endLocalDate: string) => {
+    async (
+      cycleId: string,
+      endLocalDate: string,
+      expectedRevision?: number
+    ) => {
       if (!meta) throw new Error("데이터베이스가 초기화되지 않았습니다.");
       const res = await endCycleAction(
         db,
@@ -337,6 +468,7 @@ export function DbProvider({ children }: { children: ReactNode }) {
         {
           cycleId,
           endLocalDate,
+          expectedRevision,
         }
       );
       await loadData();
@@ -380,12 +512,15 @@ export function DbProvider({ children }: { children: ReactNode }) {
     db,
     meta,
     locations,
+    trashedLocations,
     plantings,
     trashedPlantings,
     refresh: loadData,
     addLocation,
     editLocation,
     removeLocation,
+    restoreLocationItem,
+    purgeLocationItem,
     addPlanting,
     editPlanting,
     movePlanting,

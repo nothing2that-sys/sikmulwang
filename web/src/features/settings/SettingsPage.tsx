@@ -1,4 +1,5 @@
 //+_+// Settings page showing profile/generation metadata, locations, and trash management
+import { Link } from "react-router-dom";
 import {
   PageContainer,
   PageHeading,
@@ -9,8 +10,13 @@ import { useDb } from "../../lib/db/DbContext";
 
 export function SettingsPage() {
   const { status, updateState } = usePwa();
-  const { meta, locations, trashedPlantings, restorePlantingItem, purgePlantingItem } =
-    useDb();
+  const {
+    meta,
+    locations,
+    trashedPlantings,
+    restorePlantingItem,
+    purgePlantingItem,
+  } = useDb();
 
   const statusLabels = {
     development: "개발 서버 · 오프라인 캐시 사용 안 함",
@@ -27,6 +33,7 @@ export function SettingsPage() {
         title="설정 및 데이터 관리"
         description="현재 로컬 데이터베이스와 환경 설정을 확인하세요."
       />
+
       <div className="settings-grid">
         {/* 1. 프로필 및 세대 정보 */}
         <section className="card">
@@ -78,6 +85,11 @@ export function SettingsPage() {
               </li>
             ))}
           </ul>
+          <div style={{ marginTop: "0.75rem" }}>
+            <Link to="/plants" className="text-link">
+              내 식물에서 장소 추가 및 관리하기
+            </Link>
+          </div>
         </section>
 
         {/* 3. 휴지통 관리 */}
@@ -114,7 +126,7 @@ export function SettingsPage() {
                     <button
                       type="button"
                       className="button secondary"
-                      onClick={() => restorePlantingItem(plant.id)}
+                      onClick={() => restorePlantingItem(plant.id, plant.revision)}
                     >
                       복원
                     </button>
@@ -123,8 +135,12 @@ export function SettingsPage() {
                       className="button secondary"
                       style={{ color: "var(--danger)" }}
                       onClick={() => {
-                        if (window.confirm(`'${plant.displayName}'을(를) 영구 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다.`)) {
-                          purgePlantingItem(plant.id);
+                        if (
+                          window.confirm(
+                            `'${plant.displayName}'을(를) 영구 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다.`
+                          )
+                        ) {
+                          purgePlantingItem(plant.id, plant.revision);
                         }
                       }}
                     >

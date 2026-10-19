@@ -7,6 +7,7 @@ import {
   Search,
   Stethoscope,
   Sprout,
+  AlertCircle,
 } from "lucide-react";
 import {
   PageContainer,
@@ -15,6 +16,7 @@ import {
 import { EmptyState, PhaseNotice } from "../../components/common/Feedback";
 import { SectionHeader } from "../../components/common/SectionHeader";
 import { TaskCard, type TaskPreview } from "../../components/common/TaskCard";
+import { useDb } from "../../lib/db/DbContext";
 
 const demoTasks: TaskPreview[] = [
   {
@@ -42,14 +44,20 @@ const demoTasks: TaskPreview[] = [
     description: "전체 작업 목록에서만 보이는 네 번째 샘플이에요.",
   },
 ];
+
 export function TodayPage() {
+  const { error, plantings, refresh } = useDb();
   const [demo, setDemo] = useState(false);
   const [all, setAll] = useState(false);
+
   const date = new Intl.DateTimeFormat("ko-KR", {
     month: "long",
     day: "numeric",
     weekday: "long",
   }).format(new Date());
+
+  const plantCount = plantings.length;
+
   return (
     <PageContainer>
       <PageHeading
@@ -57,19 +65,42 @@ export function TodayPage() {
         title="오늘도, 초록과 함께"
         description="작은 돌봄부터 시작해 볼까요?"
       />
+
+      {error && (
+        <section className="card space-section" role="alert" style={{ marginBottom: "1rem" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", color: "var(--danger)" }}>
+            <AlertCircle size={20} aria-hidden="true" />
+            <h2>데이터베이스 접근 오류</h2>
+          </div>
+          <p className="field-error" style={{ marginTop: "0.5rem" }}>
+            {error.message}
+          </p>
+          <div className="button-row" style={{ marginTop: "1rem" }}>
+            <button type="button" className="button" onClick={() => refresh()}>
+              다시 시도
+            </button>
+          </div>
+        </section>
+      )}
+
       <div className="today-grid">
         <section className="care-panel card">
           <SectionHeader
             title="오늘의 돌봄"
             action={
-              <span className="count-pill">{demo ? "데모 4개" : "0개"}</span>
+              <span className="count-pill">
+                {demo ? "데모 4개" : plantCount > 0 ? `등록 식물 ${plantCount}개` : "0개"}
+              </span>
             }
           />
           <p className="muted">
             {demo
               ? "개발용 예시입니다. 확인할 실제 식물은 0개입니다."
+              : plantCount > 0
+              ? `오늘 확인할 식물 ${plantCount}개 · 관리 일정 엔진(Phase 2) 준비 중`
               : "오늘 확인할 식물 0개 · 등록된 식물이 없어요"}
           </p>
+
           {demo ? (
             <div className="task-list">
               {(all ? demoTasks : demoTasks.slice(0, 3)).map((task) => (
@@ -78,6 +109,19 @@ export function TodayPage() {
               <button className="text-link" onClick={() => setAll(!all)}>
                 {all ? "주요 작업 3개만 보기" : "데모 작업 모두 보기 (4개)"}
               </button>
+            </div>
+          ) : plantCount > 0 ? (
+            <div className="card space-section" style={{ background: "var(--background)" }}>
+              <h3>함께하는 식물 ({plantCount}개)</h3>
+              <p className="card-summary">
+                내 식물이 로컬 저장소에 안전하게 등록되어 있어요. 맞춤형 돌봄 규칙 엔진(Phase 2)이 준비되면 매일의 점검 일정이 여기에 표시됩니다.
+              </p>
+              <div style={{ marginTop: "0.75rem" }}>
+                <Link className="button" to="/plants">
+                  내 식물 목록 관리하기
+                  <ArrowRight size={17} aria-hidden="true" style={{ marginLeft: "0.25rem" }} />
+                </Link>
+              </div>
             </div>
           ) : (
             <EmptyState
@@ -91,6 +135,7 @@ export function TodayPage() {
               }
             />
           )}
+
           <label className="demo-toggle">
             <input
               type="checkbox"
@@ -103,6 +148,7 @@ export function TodayPage() {
             개발용 관리 카드 보기
           </label>
         </section>
+
         <aside className="today-aside">
           <section className="weather-card card">
             <CloudSun size={35} aria-hidden="true" />
@@ -115,16 +161,22 @@ export function TodayPage() {
               지역 및 환경 안내 <ArrowRight size={17} aria-hidden="true" />
             </Link>
           </section>
+
           <section className="week-card card">
             <CalendarDays aria-hidden="true" />
             <h2>이번 주도 천천히</h2>
-            <p>등록된 식물이 없어 예정된 작업이 없어요.</p>
+            <p>
+              {plantCount > 0
+                ? `등록된 식물 ${plantCount}개 · 주간 일정 엔진(Phase 2) 준비 중`
+                : "등록된 식물이 없어 예정된 작업이 없어요."}
+            </p>
             <Link className="text-link" to="/week">
               이번 주 작업 보기 <ArrowRight size={17} aria-hidden="true" />
             </Link>
           </section>
         </aside>
       </div>
+
       <section className="space-section">
         <SectionHeader title="초록 생활의 시작" />
         <div className="shortcut-grid">
@@ -149,26 +201,38 @@ export function TodayPage() {
     </PageContainer>
   );
 }
+
 export function WeekPage() {
+  const { plantings } = useDb();
   return (
     <PageContainer>
       <PageHeading
         eyebrow="이번 주"
         title="일주일의 돌봄"
-        description="실제 관리 일정은 식물 등록과 관리 엔진 연결 후 제공돼요."
+        description="실제 관리 일정은 관리 엔진(Phase 2) 연결 후 자동 계산됩니다."
       />
       <EmptyState
-        title="예정된 작업이 없어요"
-        description="현재는 개인 식물과 관리 작업을 저장하지 않습니다."
+        title={plantings.length > 0 ? "예정된 자동 일정이 아직 없어요" : "예정된 작업이 없어요"}
+        description={
+          plantings.length > 0
+            ? `현재 등록된 ${plantings.length}개의 식물은 로컬에 저장되어 있으며, 돌봄 규칙 엔진(Phase 2) 준비 후 일정이 계산됩니다.`
+            : "현재는 개인 식물과 관리 작업을 저장하지 않습니다."
+        }
         action={
-          <Link className="button secondary" to="/">
-            오늘로 돌아가기
-          </Link>
+          <div className="button-row">
+            <Link className="button" to="/plants">
+              내 식물 보기
+            </Link>
+            <Link className="button secondary" to="/">
+              오늘로 돌아가기
+            </Link>
+          </div>
         }
       />
     </PageContainer>
   );
 }
+
 export function CheckPage() {
   return (
     <PageContainer>

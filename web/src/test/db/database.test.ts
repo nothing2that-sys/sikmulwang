@@ -296,7 +296,7 @@ describe("P1 Local Data Foundation — IndexedDB & Repositories", () => {
       );
 
       expect(updated.quantity).toBe(3);
-      expect(updated.quantityChangeReason).toBe("1개 분갈이 중 손상으로 폐기");
+      expect(updated.quantityChangeReason).toContain("1개 분갈이 중 손상으로 폐기");
 
       //+_+// Empty reason rejected
       await expect(

@@ -1,4 +1,4 @@
-//+_+// Planting repository managing plantings, group splits, and environment history
+//+_+// Planting repository managing plantings, group splits, and environment history with optimistic concurrency
 import type { SikmulwangDB } from "./database";
 import type {
   EnvironmentHistoryRecord,
@@ -8,7 +8,8 @@ import type {
   CycleRecord,
 } from "./types";
 import { withWriteTransaction } from "./transaction";
-import { NotFoundError, ValidationError } from "./errors";
+import { ConflictError, NotFoundError, ValidationError } from "./errors";
+import { validateLocalDate, validateQuantity } from "./validators";
 
 export interface CreatePlantingParams {
   displayName: string;
@@ -26,7 +27,16 @@ export interface UpdatePlantingParams {
   unit?: string;
   growingStatus?: GrowingStatus;
   taxonSnapshotId?: string | null;
+  expectedRevision?: number;
 }
+
+const VALID_GROUP_TYPES: readonly GroupType[] = ["INDIVIDUAL", "GROUP"];
+const VALID_GROWING_STATUSES: readonly GrowingStatus[] = [
+  "GROWING",
+  "HARVESTED",
+  "DORMANT",
+  "DEAD",
+];
 
 export async function listPlantings(
   db: SikmulwangDB,
@@ -72,11 +82,21 @@ export async function createPlanting(
   sessionGenerationId: string,
   params: CreatePlantingParams
 ): Promise<{ planting: PlantingRecord; cycle?: CycleRecord }> {
-  if (!params.displayName.trim()) {
+  if (!params.displayName || !params.displayName.trim()) {
     throw new ValidationError("식물 이름을 입력해 주세요.");
   }
-  if (params.quantity <= 0) {
-    throw new ValidationError("수량은 1 이상이어야 합니다.");
+  if (!VALID_GROUP_TYPES.includes(params.groupType)) {
+    throw new ValidationError(`올바르지 않은 관리 형태입니다: ${params.groupType}`);
+  }
+
+  validateQuantity(params.quantity, params.groupType);
+
+  if (params.growingStatus && !VALID_GROWING_STATUSES.includes(params.growingStatus)) {
+    throw new ValidationError(`올바르지 않은 생육 상태입니다: ${params.growingStatus}`);
+  }
+
+  if (params.startLocalDate) {
+    validateLocalDate(params.startLocalDate, "시즌 시작일");
   }
 
   const plantingId = `plt_${crypto.randomUUID()}`;
@@ -89,12 +109,15 @@ export async function createPlanting(
     sessionEpoch,
     sessionGenerationId,
     async ({ generationId, nowUtc }) => {
-      //+_+// Verify location existence and snapshot
+      //+_+// Verify location existence and ensure it is not trashed or purged
       const loc = await db.locations.get([generationId, params.locationId]);
       if (!loc || loc.recordStatus === "PURGED") {
         throw new NotFoundError(
           `지정된 장소를 찾을 수 없습니다: ${params.locationId}`
         );
+      }
+      if (loc.recordStatus === "TRASHED") {
+        throw new ValidationError("휴지통에 있는 장소에는 식물을 등록할 수 없습니다.");
       }
 
       const planting: PlantingRecord = {
@@ -171,6 +194,16 @@ export async function updatePlanting(
   id: string,
   updates: UpdatePlantingParams
 ): Promise<PlantingRecord> {
+  if (updates.displayName !== undefined && !updates.displayName.trim()) {
+    throw new ValidationError("식물 이름을 비워둘 수 없습니다.");
+  }
+  if (
+    updates.growingStatus !== undefined &&
+    !VALID_GROWING_STATUSES.includes(updates.growingStatus)
+  ) {
+    throw new ValidationError(`올바르지 않은 생육 상태입니다: ${updates.growingStatus}`);
+  }
+
   return await withWriteTransaction(
     db,
     [db.plantings],
@@ -182,8 +215,15 @@ export async function updatePlanting(
         throw new NotFoundError(`식물을 찾을 수 없습니다: ${id}`);
       }
 
-      if (updates.displayName !== undefined && !updates.displayName.trim()) {
-        throw new ValidationError("식물 이름을 비워둘 수 없습니다.");
+      if (
+        updates.expectedRevision !== undefined &&
+        existing.revision !== updates.expectedRevision
+      ) {
+        throw new ConflictError(
+          `식물 수정 충돌: 현재 revision(${existing.revision})이 기대값(${updates.expectedRevision})과 다릅니다.`,
+          existing.revision,
+          updates.expectedRevision
+        );
       }
 
       const updated: PlantingRecord = {
@@ -214,7 +254,8 @@ export async function movePlantingLocation(
   sessionGenerationId: string,
   plantingId: string,
   newLocationId: string,
-  effectiveAt?: string
+  effectiveAt?: string,
+  expectedRevision?: number
 ): Promise<PlantingRecord> {
   return await withWriteTransaction(
     db,
@@ -227,16 +268,30 @@ export async function movePlantingLocation(
         throw new NotFoundError(`식물을 찾을 수 없습니다: ${plantingId}`);
       }
 
+      if (
+        expectedRevision !== undefined &&
+        planting.revision !== expectedRevision
+      ) {
+        throw new ConflictError(
+          `식물 장소 이동 충돌: 현재 revision(${planting.revision})이 기대값(${expectedRevision})과 다릅니다.`,
+          planting.revision,
+          expectedRevision
+        );
+      }
+
       const targetLoc = await db.locations.get([generationId, newLocationId]);
       if (!targetLoc || targetLoc.recordStatus === "PURGED") {
         throw new NotFoundError(
           `이동할 장소를 찾을 수 없습니다: ${newLocationId}`
         );
       }
+      if (targetLoc.recordStatus === "TRASHED") {
+        throw new ValidationError("휴지통에 있는 장소로는 이동할 수 없습니다.");
+      }
 
       const moveTime = effectiveAt ?? nowUtc;
 
-      //+_+// Close existing active environment history
+      //+_+// Close existing active environment history and validate monotonic timeline
       const existingHistories = await db.environmentHistory
         .where("generationId")
         .equals(generationId)
@@ -244,6 +299,12 @@ export async function movePlantingLocation(
         .toArray();
 
       for (const history of existingHistories) {
+        if (new Date(moveTime).getTime() < new Date(history.validFrom).getTime()) {
+          throw new ValidationError(
+            `장소 이동 시각(${moveTime})은 기존 환경 이력의 시작 시각(${history.validFrom})보다 앞설 수 없습니다.`
+          );
+        }
+
         await db.environmentHistory.put({
           ...history,
           validTo: moveTime,
@@ -297,10 +358,16 @@ export async function splitPlantingGroup(
   sourcePlantingId: string,
   splitQuantity: number,
   newDisplayName?: string,
-  reason?: string
+  reason?: string,
+  expectedRevision?: number
 ): Promise<{ source: PlantingRecord; split: PlantingRecord }> {
-  if (splitQuantity <= 0) {
-    throw new ValidationError("분할 수량은 1 이상이어야 합니다.");
+  if (
+    typeof splitQuantity !== "number" ||
+    !Number.isFinite(splitQuantity) ||
+    !Number.isInteger(splitQuantity) ||
+    splitQuantity <= 0
+  ) {
+    throw new ValidationError("분할 수량은 1 이상의 정수여야 합니다.");
   }
 
   const splitId = `plt_${crypto.randomUUID()}`;
@@ -318,6 +385,18 @@ export async function splitPlantingGroup(
           `원본 식물을 찾을 수 없습니다: ${sourcePlantingId}`
         );
       }
+
+      if (
+        expectedRevision !== undefined &&
+        source.revision !== expectedRevision
+      ) {
+        throw new ConflictError(
+          `그룹 분할 충돌: 현재 revision(${source.revision})이 기대값(${expectedRevision})과 다릅니다.`,
+          source.revision,
+          expectedRevision
+        );
+      }
+
       if (source.groupType !== "GROUP") {
         throw new ValidationError("개체 식물은 분할할 수 없습니다.");
       }
@@ -328,12 +407,16 @@ export async function splitPlantingGroup(
       }
 
       const splitReason = reason?.trim() || "그룹 분할로 인한 분리";
+      const formattedReason = `[${nowUtc}] 분할로 인한 수량 감소 (${splitQuantity}${source.unit} 분리: ${splitReason})`;
+      const updatedSourceReason = source.quantityChangeReason
+        ? `${source.quantityChangeReason}\n${formattedReason}`
+        : formattedReason;
 
-      //+_+// 1. Update source
+      //+_+// 1. Update source with reason history preserved
       const updatedSource: PlantingRecord = {
         ...source,
         quantity: source.quantity - splitQuantity,
-        quantityChangeReason: `분할로 인한 수량 감소 (${splitQuantity}${source.unit} 분리)`,
+        quantityChangeReason: updatedSourceReason,
         updatedAt: nowUtc,
         revision: source.revision + 1,
       };
@@ -358,7 +441,7 @@ export async function splitPlantingGroup(
         growingStatus: source.growingStatus,
         recordStatus: "ACTIVE",
         splitFromPlantingId: sourcePlantingId,
-        quantityChangeReason: `원본 '${source.displayName}'에서 분할 생성: ${splitReason}`,
+        quantityChangeReason: `[${nowUtc}] 원본 '${source.displayName}'에서 분할 생성: ${splitReason}`,
         createdAt: nowUtc,
         updatedAt: nowUtc,
         revision: 1,
@@ -400,12 +483,10 @@ export async function changePlantingQuantity(
   sessionGenerationId: string,
   plantingId: string,
   newQuantity: number,
-  reason: string
+  reason: string,
+  expectedRevision?: number
 ): Promise<PlantingRecord> {
-  if (newQuantity <= 0) {
-    throw new ValidationError("수량은 1 이상이어야 합니다.");
-  }
-  if (!reason.trim()) {
+  if (!reason || !reason.trim()) {
     throw new ValidationError("수량 변경 사유를 입력해 주세요.");
   }
 
@@ -420,10 +501,28 @@ export async function changePlantingQuantity(
         throw new NotFoundError(`식물을 찾을 수 없습니다: ${plantingId}`);
       }
 
+      if (
+        expectedRevision !== undefined &&
+        existing.revision !== expectedRevision
+      ) {
+        throw new ConflictError(
+          `수량 변경 충돌: 현재 revision(${existing.revision})이 기대값(${expectedRevision})과 다릅니다.`,
+          existing.revision,
+          expectedRevision
+        );
+      }
+
+      validateQuantity(newQuantity, existing.groupType);
+
+      const formattedReason = `[${nowUtc}] (${existing.quantity} -> ${newQuantity}) ${reason.trim()}`;
+      const accumulatedReason = existing.quantityChangeReason
+        ? `${existing.quantityChangeReason}\n${formattedReason}`
+        : formattedReason;
+
       const updated: PlantingRecord = {
         ...existing,
         quantity: newQuantity,
-        quantityChangeReason: reason.trim(),
+        quantityChangeReason: accumulatedReason,
         updatedAt: nowUtc,
         revision: existing.revision + 1,
       };
@@ -438,7 +537,8 @@ export async function trashPlanting(
   db: SikmulwangDB,
   sessionEpoch: number,
   sessionGenerationId: string,
-  id: string
+  id: string,
+  expectedRevision?: number
 ): Promise<void> {
   await withWriteTransaction(
     db,
@@ -449,6 +549,17 @@ export async function trashPlanting(
       const existing = await db.plantings.get([generationId, id]);
       if (!existing || existing.recordStatus === "PURGED") {
         throw new NotFoundError(`식물을 찾을 수 없습니다: ${id}`);
+      }
+
+      if (
+        expectedRevision !== undefined &&
+        existing.revision !== expectedRevision
+      ) {
+        throw new ConflictError(
+          `식물 휴지통 이동 충돌: 현재 revision(${existing.revision})이 기대값(${expectedRevision})과 다릅니다.`,
+          existing.revision,
+          expectedRevision
+        );
       }
 
       await db.plantings.put({
@@ -465,17 +576,37 @@ export async function restorePlanting(
   db: SikmulwangDB,
   sessionEpoch: number,
   sessionGenerationId: string,
-  id: string
+  id: string,
+  expectedRevision?: number
 ): Promise<void> {
   await withWriteTransaction(
     db,
-    [db.plantings],
+    [db.plantings, db.locations],
     sessionEpoch,
     sessionGenerationId,
     async ({ generationId, nowUtc }) => {
       const existing = await db.plantings.get([generationId, id]);
       if (!existing || existing.recordStatus === "PURGED") {
         throw new NotFoundError(`식물을 찾을 수 없습니다: ${id}`);
+      }
+
+      if (
+        expectedRevision !== undefined &&
+        existing.revision !== expectedRevision
+      ) {
+        throw new ConflictError(
+          `식물 복원 충돌: 현재 revision(${existing.revision})이 기대값(${expectedRevision})과 다릅니다.`,
+          existing.revision,
+          expectedRevision
+        );
+      }
+
+      // Check whether planting's location still exists
+      const loc = await db.locations.get([generationId, existing.locationId]);
+      if (!loc || loc.recordStatus === "PURGED") {
+        throw new ValidationError(
+          "식물이 속해 있던 재배 장소가 영구 삭제되어 복원할 수 없습니다. 새 장소를 지정해야 합니다."
+        );
       }
 
       await db.plantings.put({
@@ -492,7 +623,8 @@ export async function purgePlanting(
   db: SikmulwangDB,
   sessionEpoch: number,
   sessionGenerationId: string,
-  id: string
+  id: string,
+  expectedRevision?: number
 ): Promise<void> {
   await withWriteTransaction(
     db,
@@ -500,6 +632,22 @@ export async function purgePlanting(
     sessionEpoch,
     sessionGenerationId,
     async ({ generationId }) => {
+      const existing = await db.plantings.get([generationId, id]);
+      if (!existing) {
+        return;
+      }
+
+      if (
+        expectedRevision !== undefined &&
+        existing.revision !== expectedRevision
+      ) {
+        throw new ConflictError(
+          `식물 영구 삭제 충돌: 현재 revision(${existing.revision})이 기대값(${expectedRevision})과 다릅니다.`,
+          existing.revision,
+          expectedRevision
+        );
+      }
+
       await db.plantings.delete([generationId, id]);
 
       //+_+// Purge linked environment histories and cycles
