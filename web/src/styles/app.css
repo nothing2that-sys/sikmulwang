@@ -708,6 +708,13 @@
   dialog h2 {
     margin-bottom: 0.75rem;
   }
+  .plant-dialog {
+    width: min(32rem, calc(100vw - 2rem));
+    max-height: calc(100vh - 2rem);
+    max-height: calc(100dvh - 2rem);
+    overflow-y: auto;
+    overscroll-behavior: contain;
+  }
   .skip-link {
     position: fixed;
     top: 0.5rem;

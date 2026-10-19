@@ -1,6 +1,46 @@
 //+_+// Playwright E2E tests for Phase 1 local data foundation
 import { test, expect } from "@playwright/test";
 
+for (const width of [320, 360, 390, 768, 1280]) {
+  test(`plant dialogs stay above navigation and scroll at ${width}px`, async ({ page }) => {
+    await page.setViewportSize({ width, height: 640 });
+    await page.goto("/plants");
+    const trigger = page.getByRole("button", { name: "새 식물 심기", exact: true });
+    await trigger.click();
+    const addDialog = page.getByRole("dialog", { name: "새 식물 심기", exact: true });
+    await expect(addDialog).toBeVisible();
+    expect(await addDialog.evaluate((el) => el.matches(":modal"))).toBe(true);
+    await page.getByLabel("식물 이름 (애칭 또는 품종) *").fill("모바일 등록 검증");
+    await page.getByLabel("관리 형태").selectOption("GROUP");
+    await page.getByLabel("수량 *").fill("3");
+    expect(await addDialog.evaluate((el) => el.scrollWidth <= el.clientWidth)).toBe(true);
+    expect((await addDialog.boundingBox())!.height).toBeLessThanOrEqual(640);
+    await page.getByRole("button", { name: "식물 등록 완료" }).click();
+    await expect(addDialog).toHaveCount(0);
+    await expect(trigger).toBeFocused();
+    await expect(page.getByRole("heading", { name: "모바일 등록 검증", exact: true })).toBeVisible();
+
+    const manageTrigger = page.getByRole("button", { name: "관리하기" });
+    await manageTrigger.click();
+    const manageDialog = page.getByRole("dialog", { name: "모바일 등록 검증 관리" });
+    await expect(manageDialog).toBeVisible();
+    expect(await manageDialog.evaluate((el) => el.matches(":modal"))).toBe(true);
+    expect(await manageDialog.evaluate((el) => el.scrollWidth <= el.clientWidth)).toBe(true);
+    expect((await manageDialog.boundingBox())!.height).toBeLessThanOrEqual(640);
+    await page.getByRole("button", { name: "닫기", exact: true }).click();
+    await expect(manageTrigger).toBeFocused();
+
+    await manageTrigger.click();
+    for (let i = 0; i < 18; i += 1) {
+      await page.keyboard.press("Tab");
+      expect(await manageDialog.evaluate((el) => el.contains(document.activeElement))).toBe(true);
+    }
+    await page.keyboard.press("Escape");
+    await expect(manageDialog).toHaveCount(0);
+    await expect(manageTrigger).toBeFocused();
+  });
+}
+
 test.describe("P1 Local Data Foundation — UI & Persistence", () => {
   test("registers plant, displays it in list, and persists across reload", async ({
     page,

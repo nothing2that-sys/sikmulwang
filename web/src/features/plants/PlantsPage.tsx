@@ -11,6 +11,7 @@ import {
   StatusBadge,
 } from "../../components/common/Feedback";
 import { PlantCard } from "../../components/common/PlantCard";
+import { ModalDialog } from "../../components/common/ModalDialog";
 import { demoCatalog } from "../discover/demo-catalog";
 import { useDb } from "../../lib/db/DbContext";
 import type {
@@ -278,15 +279,7 @@ function AddPlantDialog({
   };
 
   return (
-    <dialog
-      open
-      aria-labelledby={`${id}-title`}
-      className="card"
-      style={{ display: "block" }}
-      onKeyDown={(e) => {
-        if (e.key === "Escape") onClose();
-      }}
-    >
+    <ModalDialog labelledBy={`${id}-title`} onClose={onClose}>
       <h2 id={`${id}-title`}>새 식물 심기</h2>
       <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
         {errorMsg && (
@@ -422,7 +415,7 @@ function AddPlantDialog({
           </button>
         </div>
       </form>
-    </dialog>
+    </ModalDialog>
   );
 }
 
@@ -476,15 +469,7 @@ function ManagePlantDialog({
   const currentLocation = locations.find((l) => l.id === plant.locationId);
 
   return (
-    <dialog
-      open
-      aria-labelledby={`${id}-manage-title`}
-      className="card"
-      style={{ display: "block", maxHeight: "90vh", overflowY: "auto" }}
-      onKeyDown={(e) => {
-        if (e.key === "Escape") onClose();
-      }}
-    >
+    <ModalDialog labelledBy={`${id}-manage-title`} onClose={onClose}>
       <h2 id={`${id}-manage-title`}>{plant.displayName} 관리</h2>
       <p className="card-summary" style={{ marginBottom: "1rem" }}>
         현재 장소: <strong>{currentLocation?.label ?? "장소 미지정"}</strong> ·{" "}
@@ -725,7 +710,7 @@ function ManagePlantDialog({
           닫기
         </button>
       </div>
-    </dialog>
+    </ModalDialog>
   );
 }
 
