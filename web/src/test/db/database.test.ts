@@ -174,7 +174,7 @@ describe("P1 Local Data Foundation — IndexedDB & Repositories", () => {
         locationId: loc1.id,
       });
 
-      const moveTime = "2026-10-19T10:00:00.000Z";
+      const moveTime = new Date(Date.now() + 5000).toISOString();
       const movedPlanting = await movePlantingLocation(
         db,
         epoch,
