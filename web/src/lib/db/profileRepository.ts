@@ -5,7 +5,7 @@ import type {
   GenerationState,
   ProfileRecord,
 } from "./types";
-import { NotFoundError } from "./errors";
+import { CorruptedMetadataError, NotFoundError } from "./errors";
 
 export interface SystemMetaState {
   activeProfileId: string;
@@ -49,24 +49,20 @@ export async function setWriteFence(
   db: SikmulwangDB,
   active: boolean
 ): Promise<void> {
-  const now = new Date().toISOString();
-  await db.meta.put({
-    key: "writeFence",
-    value: active,
-    updatedAt: now,
+  await db.transaction("rw", [db.meta, db.profiles, db.generationRegistry], async () => {
+    await getSystemMeta(db);
+    await db.meta.put({ key: "writeFence", value: active, updatedAt: new Date().toISOString() });
   });
 }
 
 export async function bumpEpoch(db: SikmulwangDB): Promise<number> {
-  const meta = await getSystemMeta(db);
-  const nextEpoch = meta.epoch + 1;
-  const now = new Date().toISOString();
-  await db.meta.put({
-    key: "epoch",
-    value: nextEpoch,
-    updatedAt: now,
+  return db.transaction("rw", [db.meta, db.profiles, db.generationRegistry], async () => {
+    const meta = await getSystemMeta(db);
+    const nextEpoch = meta.epoch + 1;
+    if (!Number.isSafeInteger(nextEpoch)) throw new CorruptedMetadataError("epoch를 갱신할 수 없습니다.");
+    await db.meta.put({ key: "epoch", value: nextEpoch, updatedAt: new Date().toISOString() });
+    return nextEpoch;
   });
-  return nextEpoch;
 }
 
 export async function switchActiveGeneration(

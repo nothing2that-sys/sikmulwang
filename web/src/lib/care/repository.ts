@@ -2,6 +2,7 @@ import Dexie from 'dexie';
 import type { SikmulwangDB } from '../db/database';
 import type { CareEventRecord, ObservationRecord, TaskOccurrenceRecord, CycleRecord } from '../db/types';
 import { withWriteTransaction } from '../db/transaction';
+import { verifyRuleSnapshot } from '../db/writerCompatibility';
 import { ConflictError, ValidationError } from '../db/errors';
 import { validateEffectiveTimestamp, validateExpectedRevision, validateLocalDate } from '../db/validators';
 import { canonical, compare, evaluate, factOrder, interval, localDate, type Fact, type Rule, type RuleInput } from './engine';
@@ -172,10 +173,12 @@ export async function executeCare(db: SikmulwangDB, epoch: number, generation: s
     }
     const inputSnapshot = canonical(input), ruleBody = canonical(rule);
     const {inputDigest,ruleSnapshotHash} = output.evidence;
-    const snapshotId = rule ? `rule/${rule.id}` : null;
+    const snapshotId = rule?.id ?? null;
     if (rule && snapshotId) {
       const snapshot = await db.ruleSnapshots.get([generationId,snapshotId]);
-      if (snapshot && snapshot.sha256 !== ruleSnapshotHash) throw new ValidationError('규칙 스냅샷이 변경되었습니다.');
+      const legacySnapshot = await db.ruleSnapshots.get([generationId,`rule/${rule.id}`]);
+      if (snapshot) await verifyRuleSnapshot(snapshot,ruleBody);
+      if (legacySnapshot) await verifyRuleSnapshot(legacySnapshot,ruleBody);
       if (!snapshot) await db.ruleSnapshots.add({generationId,id:snapshotId,stableRuleId:rule.id,version:rule.version,normalizedBody:ruleBody,sha256:ruleSnapshotHash,...metadata(nowUtc)});
     }
     const resultTaskId = rule ? (task?.id ?? current.id) : null;

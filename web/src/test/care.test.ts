@@ -192,6 +192,29 @@ describe('P2 atomic repositories',() => {
     const spy = vi.spyOn(crypto.subtle,'digest').mockRejectedValueOnce(new Error('crypto failure'));
     await expect(run('WATERED',task)).rejects.toThrow(); spy.mockRestore(); expect(await state()).toBe(before);
   });
+  it('R3 every new decision evidence resolves to the persisted immutable rule snapshot',async () => {
+    const task = await setup(); await run('WATERED',task);
+    for (const log of await db.decisionLogs.toArray()) {
+      const output = JSON.parse(log.outputSnapshot);
+      expect(output.evidence.ruleSnapshotId).toBe(log.ruleSnapshotIds[0]);
+      const snapshot = await db.ruleSnapshots.get([generation,output.evidence.ruleSnapshotId]);
+      expect(snapshot).toBeDefined();
+      expect(await sha256(snapshot!.normalizedBody)).toBe(log.ruleSnapshotHash);
+      expect(await sha256(log.inputSnapshot)).toBe(log.inputDigest);
+    }
+  });
+  for (const damage of ['body','hash','identity','version','consistent-but-wrong-body'] as const) it(`R2 current snapshot ${damage} refuses care and rolls back all stores`,async () => {
+    const task = await setup(), snapshot = (await db.ruleSnapshots.toArray())[0];
+    if (damage === 'body') await db.ruleSnapshots.update([generation,snapshot.id],{normalizedBody:'{"inspectionDays":30,"tampered":true}'});
+    if (damage === 'hash') await db.ruleSnapshots.update([generation,snapshot.id],{sha256:'0'.repeat(64)});
+    if (damage === 'identity') await db.ruleSnapshots.update([generation,snapshot.id],{stableRuleId:'wrong-id'});
+    if (damage === 'version') await db.ruleSnapshots.update([generation,snapshot.id],{version:'wrong-version'});
+    if (damage === 'consistent-but-wrong-body') {
+      const body = canonical({...JSON.parse(snapshot.normalizedBody),inspectionDays:30});
+      await db.ruleSnapshots.update([generation,snapshot.id],{normalizedBody:body,sha256:await sha256(body)});
+    }
+    const before = await state(); await expect(run('WATERED',task)).rejects.toThrow(); expect(await state()).toBe(before);
+  });
   it('RULE-19 stale epoch, fence and R5 damage block writes',async () => {
     const task = await setup();
     for (const [key,value] of [['epoch',2],['writeFence',true]] as const) {

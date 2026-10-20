@@ -1,6 +1,7 @@
 //+_+// Dexie database definition conforming to docs/12_DATA_CONTRACT_V1.md
 import Dexie, { type Table } from "dexie";
-import { CorruptedMetadataError } from "./errors";
+import { CorruptedMetadataError, WriteFenceActiveError } from "./errors";
+import { preserveLegacyRuleSnapshotReferences } from "./writerCompatibility";
 import type {
   MetaEntry,
   ProfileRecord,
@@ -103,7 +104,10 @@ export function setDbInstance(db: SikmulwangDB | null): void {
   defaultDbInstance = db;
 }
 
-export const SUPPORTED_SCHEMA_VERSION = 1;
+//+_+// Global writer compatibility v2 is distinct from physical Dexie v1 and domain record schema v1.
+export const WRITER_COMPATIBILITY_VERSION = 2;
+export const SUPPORTED_SCHEMA_VERSION = WRITER_COMPATIBILITY_VERSION;
+export const RECORD_SCHEMA_VERSION = 1;
 
 export interface InitializedMeta {
   activeProfileId: string;
@@ -117,6 +121,15 @@ export interface InitializedMeta {
 export async function verifyAndGetSystemMeta(
   metaMap: Map<string, unknown>,
   db: SikmulwangDB
+): Promise<InitializedMeta> {
+  return validateSystemMeta(metaMap, db, SUPPORTED_SCHEMA_VERSION);
+}
+
+//+_+// Only initialization may validate legacy writer metadata for the atomic transition.
+async function validateSystemMeta(
+  metaMap: Map<string, unknown>,
+  db: SikmulwangDB,
+  expectedVersion: number
 ): Promise<InitializedMeta> {
   const missingKeys = [
     "activeProfileId",
@@ -147,7 +160,7 @@ export async function verifyAndGetSystemMeta(
   if (
     typeof epoch !== "number" ||
     !Number.isFinite(epoch) ||
-    !Number.isInteger(epoch) ||
+    !Number.isSafeInteger(epoch) ||
     epoch < 1
   ) {
     throw new CorruptedMetadataError(
@@ -159,9 +172,9 @@ export async function verifyAndGetSystemMeta(
       `writeFence는 반드시 boolean이어야 합니다. 입력값: ${String(writeFence)}`
     );
   }
-  if (schemaVersion !== SUPPORTED_SCHEMA_VERSION) {
+  if (schemaVersion !== expectedVersion) {
     throw new CorruptedMetadataError(
-      `지원하지 않는 스키마 버전입니다: ${String(schemaVersion)} (지원 버전: ${SUPPORTED_SCHEMA_VERSION})`
+      `지원하지 않는 스키마 버전입니다: ${String(schemaVersion)} (지원 버전: ${expectedVersion})`
     );
   }
 
@@ -206,27 +219,44 @@ export async function initializeDatabase(
 ): Promise<InitializedMeta> {
   return await db.transaction(
     "rw",
-    [
-      db.meta,
-      db.profiles,
-      db.generationRegistry,
-      db.locations,
-      db.userPreferences,
-    ],
+    db.tables,
     async () => {
       const metaEntries = await db.meta.toArray();
       const metaMap = new Map(metaEntries.map((e) => [e.key, e.value]));
 
       // 1. Existing database: MUST verify integrity of safety metadata
       if (metaEntries.length > 0) {
+        if (metaMap.get("schemaVersion") === 1) {
+          const legacy = await validateSystemMeta(metaMap, db, 1);
+          if (legacy.writeFence) throw new WriteFenceActiveError();
+          if (!Number.isSafeInteger(legacy.epoch + 1)) {
+            throw new CorruptedMetadataError("호환성 전환에 필요한 epoch를 갱신할 수 없습니다.");
+          }
+          const now = new Date().toISOString();
+          //+_+// Original domain rows/logs are immutable; verified snapshot aliases are append-only.
+          await preserveLegacyRuleSnapshotReferences(db, now);
+          await db.meta.put({ key: "epoch", value: legacy.epoch + 1, updatedAt: now });
+          await db.meta.put({ key: "schemaVersion", value: SUPPORTED_SCHEMA_VERSION, updatedAt: now });
+          await db.meta.put({
+            key: "writerCompatibility",
+            value: { from: 1, to: SUPPORTED_SCHEMA_VERSION, recordSchemaVersion: RECORD_SCHEMA_VERSION },
+            updatedAt: now,
+          });
+          return { ...legacy, epoch: legacy.epoch + 1, schemaVersion: SUPPORTED_SCHEMA_VERSION };
+        }
         return await verifyAndGetSystemMeta(metaMap, db);
       }
 
       // 2. Clean initial run: meta store is completely empty
+      for (const table of db.tables) {
+        if (table.name !== "meta" && await table.count()) {
+          throw new CorruptedMetadataError("안전 메타데이터 없는 기존 기록은 초기화할 수 없습니다.");
+        }
+      }
       const defaultProfileId = "p_default";
       const defaultGenerationId = "g_default";
       const defaultEpoch = 1;
-      const defaultSchemaVersion = SUPPORTED_SCHEMA_VERSION;
+      const defaultSchemaVersion = RECORD_SCHEMA_VERSION;
       const now = new Date().toISOString();
 
       // 1. Create default profile if not exists
@@ -342,7 +372,7 @@ export async function initializeDatabase(
         },
         { key: "epoch", value: defaultEpoch, updatedAt: now },
         { key: "writeFence", value: false, updatedAt: now },
-        { key: "schemaVersion", value: defaultSchemaVersion, updatedAt: now },
+        { key: "schemaVersion", value: SUPPORTED_SCHEMA_VERSION, updatedAt: now },
       ]);
 
       return {
@@ -350,7 +380,7 @@ export async function initializeDatabase(
         activeGenerationId: defaultGenerationId,
         epoch: defaultEpoch,
         writeFence: false,
-        schemaVersion: defaultSchemaVersion,
+        schemaVersion: SUPPORTED_SCHEMA_VERSION,
       };
     }
   );

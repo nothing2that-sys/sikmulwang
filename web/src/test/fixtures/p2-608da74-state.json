@@ -1,0 +1,524 @@
+{
+  "sourceCommit": "608da74cd318db593e33a16f2d2ba0b93bf9cdc5",
+  "stores": {
+    "meta": [
+      {
+        "key": "activeGenerationId",
+        "value": "g_default",
+        "updatedAt": "2026-10-20T05:03:30.206Z"
+      },
+      {
+        "key": "activeProfileId",
+        "value": "p_default",
+        "updatedAt": "2026-10-20T05:03:30.206Z"
+      },
+      {
+        "key": "epoch",
+        "value": 1,
+        "updatedAt": "2026-10-20T05:03:30.206Z"
+      },
+      {
+        "key": "schemaVersion",
+        "value": 1,
+        "updatedAt": "2026-10-20T05:03:30.206Z"
+      },
+      {
+        "key": "writeFence",
+        "value": false,
+        "updatedAt": "2026-10-20T05:03:30.206Z"
+      }
+    ],
+    "profiles": [
+      {
+        "profileId": "p_default",
+        "name": "기본 정원",
+        "currentGenerationId": "g_default",
+        "createdAt": "2026-10-20T05:03:30.206Z",
+        "updatedAt": "2026-10-20T05:03:30.206Z"
+      }
+    ],
+    "generationRegistry": [
+      {
+        "generationId": "g_default",
+        "profileId": "p_default",
+        "state": "ACTIVE",
+        "schemaVersion": 1,
+        "createdAt": "2026-10-20T05:03:30.206Z",
+        "updatedAt": "2026-10-20T05:03:30.206Z"
+      }
+    ],
+    "locations": [
+      {
+        "generationId": "g_default",
+        "id": "loc_balcony",
+        "label": "베란다 정원 (베란다)",
+        "environmentType": "BALCONY",
+        "rainfallExposure": "COVERED",
+        "sunExposure": "FULL_SUN",
+        "timeZone": "Asia/Seoul",
+        "recordStatus": "ACTIVE",
+        "createdAt": "2026-10-20T05:03:30.206Z",
+        "updatedAt": "2026-10-20T05:03:30.206Z",
+        "revision": 1,
+        "schemaVersion": 1
+      },
+      {
+        "generationId": "g_default",
+        "id": "loc_indoor_living",
+        "label": "거실 창가 (실내)",
+        "environmentType": "INDOOR",
+        "rainfallExposure": "COVERED",
+        "sunExposure": "PARTIAL_SUN",
+        "timeZone": "Asia/Seoul",
+        "recordStatus": "ACTIVE",
+        "createdAt": "2026-10-20T05:03:30.206Z",
+        "updatedAt": "2026-10-20T05:03:30.206Z",
+        "revision": 1,
+        "schemaVersion": 1
+      },
+      {
+        "generationId": "g_default",
+        "id": "loc_outdoor_yard",
+        "label": "마당 화단 (야외)",
+        "environmentType": "OUTDOOR",
+        "rainfallExposure": "EXPOSED",
+        "sunExposure": "FULL_SUN",
+        "timeZone": "Asia/Seoul",
+        "recordStatus": "ACTIVE",
+        "createdAt": "2026-10-20T05:03:30.206Z",
+        "updatedAt": "2026-10-20T05:03:30.206Z",
+        "revision": 1,
+        "schemaVersion": 1
+      }
+    ],
+    "environmentHistory": [
+      {
+        "generationId": "g_default",
+        "id": "envh_dc26aadd-bd38-49eb-acb7-63572c81bcc5",
+        "plantingId": "plt_043b87ee-40ec-4699-87c8-0a9b536322d0",
+        "locationId": "loc_indoor_living",
+        "validFrom": "2026-10-20T05:03:30.210Z",
+        "validTo": null,
+        "environmentSnapshot": {
+          "label": "거실 창가 (실내)",
+          "environmentType": "INDOOR",
+          "rainfallExposure": "COVERED",
+          "sunExposure": "PARTIAL_SUN",
+          "timeZone": "Asia/Seoul"
+        },
+        "recordStatus": "ACTIVE",
+        "createdAt": "2026-10-20T05:03:30.210Z",
+        "updatedAt": "2026-10-20T05:03:30.210Z",
+        "revision": 1,
+        "schemaVersion": 1
+      }
+    ],
+    "plantings": [
+      {
+        "generationId": "g_default",
+        "id": "plt_043b87ee-40ec-4699-87c8-0a9b536322d0",
+        "taxonSnapshotId": null,
+        "displayName": "보존 대상 P2 식물",
+        "groupType": "INDIVIDUAL",
+        "quantity": 1,
+        "unit": "그루",
+        "locationId": "loc_indoor_living",
+        "growingStatus": "GROWING",
+        "recordStatus": "ACTIVE",
+        "splitFromPlantingId": null,
+        "quantityChangeReason": null,
+        "createdAt": "2026-10-20T05:03:30.210Z",
+        "updatedAt": "2026-10-20T05:03:30.210Z",
+        "revision": 1,
+        "schemaVersion": 1
+      }
+    ],
+    "cycles": [
+      {
+        "generationId": "g_default",
+        "id": "cyc_85e4992c-62b3-4004-97a8-44edb9c285b5",
+        "plantingId": "plt_043b87ee-40ec-4699-87c8-0a9b536322d0",
+        "startLocalDate": "2026-10-01",
+        "endLocalDate": null,
+        "timeZone": "Asia/Seoul",
+        "status": "ACTIVE",
+        "recordStatus": "ACTIVE",
+        "createdAt": "2026-10-20T05:03:30.210Z",
+        "updatedAt": "2026-10-20T05:03:30.235Z",
+        "revision": 3,
+        "schemaVersion": 1
+      }
+    ],
+    "userPreferences": [
+      {
+        "generationId": "g_default",
+        "id": "pref_default",
+        "timeZone": "Asia/Seoul",
+        "locationSetting": "loc_indoor_living",
+        "defaultInspectionDays": 7,
+        "notificationPreferences": {
+          "careReminders": true
+        },
+        "recordStatus": "ACTIVE",
+        "createdAt": "2026-10-20T05:03:30.206Z",
+        "updatedAt": "2026-10-20T05:03:30.206Z",
+        "revision": 1,
+        "schemaVersion": 1
+      }
+    ],
+    "taxonSnapshots": [],
+    "careEvents": [
+      {
+        "generationId": "g_default",
+        "id": "96dcebb5-677f-4e66-a64e-63e240ad8516",
+        "cycleId": "cyc_85e4992c-62b3-4004-97a8-44edb9c285b5",
+        "actionKind": "WATERED",
+        "occurredAt": "2026-10-14T00:00:00.000Z",
+        "idempotencyKey": "bcb26aea-0adb-4915-b826-0d7bc4f9ada3",
+        "correctionOfId": null,
+        "eventStatus": "ACTIVE",
+        "createdAt": "2026-10-20T05:03:30.227Z",
+        "updatedAt": "2026-10-20T05:03:30.227Z",
+        "revision": 1,
+        "schemaVersion": 1
+      }
+    ],
+    "observations": [
+      {
+        "generationId": "g_default",
+        "id": "c587c878-18ad-4ebe-b3de-cca9f8be9ef6",
+        "cycleId": "cyc_85e4992c-62b3-4004-97a8-44edb9c285b5",
+        "observationKind": "MOIST",
+        "value": "MOIST",
+        "occurredAt": "2026-10-15T00:00:00.000Z",
+        "idempotencyKey": "c8d4c90f-e3a4-46b2-beda-3b52a5d8be35",
+        "correctionOfId": null,
+        "eventStatus": "ACTIVE",
+        "createdAt": "2026-10-20T05:03:30.230Z",
+        "updatedAt": "2026-10-20T05:03:30.230Z",
+        "revision": 1,
+        "schemaVersion": 1
+      },
+      {
+        "generationId": "g_default",
+        "id": "fa77f898-3247-4e1c-871c-d41a7e0f86a0",
+        "cycleId": "cyc_85e4992c-62b3-4004-97a8-44edb9c285b5",
+        "observationKind": "MOIST",
+        "value": "MOIST",
+        "occurredAt": "2026-10-15T00:00:00.000Z",
+        "idempotencyKey": "7937049b-25c3-4acb-9ea4-146534d08a2d",
+        "correctionOfId": "c587c878-18ad-4ebe-b3de-cca9f8be9ef6",
+        "eventStatus": "VOID",
+        "createdAt": "2026-10-20T05:03:30.233Z",
+        "updatedAt": "2026-10-20T05:03:30.233Z",
+        "revision": 1,
+        "schemaVersion": 1
+      }
+    ],
+    "taskOccurrences": [
+      {
+        "generationId": "g_default",
+        "id": "cyc_85e4992c-62b3-4004-97a8-44edb9c285b5/SOIL_CHECK/0",
+        "cycleId": "cyc_85e4992c-62b3-4004-97a8-44edb9c285b5",
+        "actionKind": "SOIL_CHECK",
+        "priority": 0,
+        "occurrenceSeq": 0,
+        "anchorId": "cycle-start",
+        "dueLocalDate": "2026-10-01",
+        "status": "RESOLVED",
+        "resolutionType": "CARE_EVENT",
+        "resolutionId": "96dcebb5-677f-4e66-a64e-63e240ad8516",
+        "createdAt": "2026-10-20T05:03:30.212Z",
+        "updatedAt": "2026-10-20T05:03:30.227Z",
+        "revision": 3,
+        "schemaVersion": 1
+      },
+      {
+        "generationId": "g_default",
+        "id": "cyc_85e4992c-62b3-4004-97a8-44edb9c285b5/SOIL_CHECK/1",
+        "cycleId": "cyc_85e4992c-62b3-4004-97a8-44edb9c285b5",
+        "actionKind": "SOIL_CHECK",
+        "priority": 0,
+        "occurrenceSeq": 1,
+        "anchorId": "96dcebb5-677f-4e66-a64e-63e240ad8516",
+        "dueLocalDate": "2026-10-17",
+        "status": "OPEN",
+        "resolutionType": null,
+        "resolutionId": null,
+        "createdAt": "2026-10-20T05:03:30.227Z",
+        "updatedAt": "2026-10-20T05:03:30.235Z",
+        "revision": 6,
+        "schemaVersion": 1
+      },
+      {
+        "generationId": "g_default",
+        "id": "cyc_85e4992c-62b3-4004-97a8-44edb9c285b5/SOIL_CHECK/2",
+        "cycleId": "cyc_85e4992c-62b3-4004-97a8-44edb9c285b5",
+        "actionKind": "SOIL_CHECK",
+        "priority": 0,
+        "occurrenceSeq": 2,
+        "anchorId": "c587c878-18ad-4ebe-b3de-cca9f8be9ef6",
+        "dueLocalDate": "2026-10-17",
+        "status": "CANCELLED",
+        "resolutionType": null,
+        "resolutionId": null,
+        "createdAt": "2026-10-20T05:03:30.230Z",
+        "updatedAt": "2026-10-20T05:03:30.233Z",
+        "revision": 3,
+        "schemaVersion": 1
+      }
+    ],
+    "taskChanges": [
+      {
+        "generationId": "g_default",
+        "id": "416cc4ff-18fc-4c3a-be02-6a950d7e86bf",
+        "taskId": "cyc_85e4992c-62b3-4004-97a8-44edb9c285b5/SOIL_CHECK/0",
+        "previousState": "[{\"actionKind\":\"SOIL_CHECK\",\"anchorId\":\"cycle-start\",\"createdAt\":\"2026-10-20T05:03:30.212Z\",\"cycleId\":\"cyc_85e4992c-62b3-4004-97a8-44edb9c285b5\",\"dueLocalDate\":\"2026-10-01\",\"generationId\":\"g_default\",\"id\":\"cyc_85e4992c-62b3-4004-97a8-44edb9c285b5/SOIL_CHECK/0\",\"occurrenceSeq\":0,\"priority\":0,\"resolutionId\":null,\"resolutionType\":null,\"revision\":2,\"schemaVersion\":1,\"status\":\"OPEN\",\"updatedAt\":\"2026-10-20T05:03:30.212Z\"}]",
+        "nextState": "[{\"actionKind\":\"SOIL_CHECK\",\"anchorId\":\"cycle-start\",\"createdAt\":\"2026-10-20T05:03:30.212Z\",\"cycleId\":\"cyc_85e4992c-62b3-4004-97a8-44edb9c285b5\",\"dueLocalDate\":\"2026-10-01\",\"generationId\":\"g_default\",\"id\":\"cyc_85e4992c-62b3-4004-97a8-44edb9c285b5/SOIL_CHECK/0\",\"occurrenceSeq\":0,\"priority\":0,\"resolutionId\":\"96dcebb5-677f-4e66-a64e-63e240ad8516\",\"resolutionType\":\"CARE_EVENT\",\"revision\":3,\"schemaVersion\":1,\"status\":\"RESOLVED\",\"updatedAt\":\"2026-10-20T05:03:30.227Z\"},{\"actionKind\":\"SOIL_CHECK\",\"anchorId\":\"96dcebb5-677f-4e66-a64e-63e240ad8516\",\"createdAt\":\"2026-10-20T05:03:30.227Z\",\"cycleId\":\"cyc_85e4992c-62b3-4004-97a8-44edb9c285b5\",\"dueLocalDate\":\"2026-10-19\",\"generationId\":\"g_default\",\"id\":\"cyc_85e4992c-62b3-4004-97a8-44edb9c285b5/SOIL_CHECK/1\",\"occurrenceSeq\":1,\"priority\":0,\"resolutionId\":null,\"resolutionType\":null,\"revision\":2,\"schemaVersion\":1,\"status\":\"OPEN\",\"updatedAt\":\"2026-10-20T05:03:30.227Z\"}]",
+        "sourceId": "96dcebb5-677f-4e66-a64e-63e240ad8516",
+        "idempotencyKey": "bcb26aea-0adb-4915-b826-0d7bc4f9ada3",
+        "requestBody": "{\"cycleId\":\"cyc_85e4992c-62b3-4004-97a8-44edb9c285b5\",\"expectedRevision\":2,\"idempotencyKey\":\"bcb26aea-0adb-4915-b826-0d7bc4f9ada3\",\"kind\":\"WATERED\",\"occurredAt\":\"2026-10-14T00:00:00.000Z\",\"taskId\":\"cyc_85e4992c-62b3-4004-97a8-44edb9c285b5/SOIL_CHECK/0\"}",
+        "occurredAt": "2026-10-20T05:03:30.227Z",
+        "createdAt": "2026-10-20T05:03:30.227Z",
+        "updatedAt": "2026-10-20T05:03:30.227Z",
+        "revision": 1,
+        "schemaVersion": 1
+      },
+      {
+        "generationId": "g_default",
+        "id": "95dc53ee-e9e8-4b40-8c1d-a11ed88240bc",
+        "taskId": "cyc_85e4992c-62b3-4004-97a8-44edb9c285b5/SOIL_CHECK/0",
+        "previousState": "[]",
+        "nextState": "[{\"actionKind\":\"SOIL_CHECK\",\"anchorId\":\"cycle-start\",\"createdAt\":\"2026-10-20T05:03:30.212Z\",\"cycleId\":\"cyc_85e4992c-62b3-4004-97a8-44edb9c285b5\",\"dueLocalDate\":\"2026-10-01\",\"generationId\":\"g_default\",\"id\":\"cyc_85e4992c-62b3-4004-97a8-44edb9c285b5/SOIL_CHECK/0\",\"occurrenceSeq\":0,\"priority\":0,\"resolutionId\":null,\"resolutionType\":null,\"revision\":2,\"schemaVersion\":1,\"status\":\"OPEN\",\"updatedAt\":\"2026-10-20T05:03:30.212Z\"}]",
+        "sourceId": "dba8ce6f-c2cb-4df8-8c8f-a0b78208f617",
+        "idempotencyKey": "085334b5-d55b-4bcf-93ef-756dbac0f5a1",
+        "requestBody": "{\"cycleId\":\"cyc_85e4992c-62b3-4004-97a8-44edb9c285b5\",\"expectedRevision\":1,\"idempotencyKey\":\"085334b5-d55b-4bcf-93ef-756dbac0f5a1\",\"inspectionDays\":5,\"kind\":\"RULE\",\"occurredAt\":\"2026-10-14T00:00:00.000Z\"}",
+        "occurredAt": "2026-10-20T05:03:30.212Z",
+        "createdAt": "2026-10-20T05:03:30.212Z",
+        "updatedAt": "2026-10-20T05:03:30.212Z",
+        "revision": 1,
+        "schemaVersion": 1
+      },
+      {
+        "generationId": "g_default",
+        "id": "b0f5557e-26d5-4789-b26d-2cba9b478964",
+        "taskId": "cyc_85e4992c-62b3-4004-97a8-44edb9c285b5/SOIL_CHECK/1",
+        "previousState": "[{\"actionKind\":\"SOIL_CHECK\",\"anchorId\":\"cycle-start\",\"createdAt\":\"2026-10-20T05:03:30.212Z\",\"cycleId\":\"cyc_85e4992c-62b3-4004-97a8-44edb9c285b5\",\"dueLocalDate\":\"2026-10-01\",\"generationId\":\"g_default\",\"id\":\"cyc_85e4992c-62b3-4004-97a8-44edb9c285b5/SOIL_CHECK/0\",\"occurrenceSeq\":0,\"priority\":0,\"resolutionId\":\"96dcebb5-677f-4e66-a64e-63e240ad8516\",\"resolutionType\":\"CARE_EVENT\",\"revision\":3,\"schemaVersion\":1,\"status\":\"RESOLVED\",\"updatedAt\":\"2026-10-20T05:03:30.227Z\"},{\"actionKind\":\"SOIL_CHECK\",\"anchorId\":\"96dcebb5-677f-4e66-a64e-63e240ad8516\",\"createdAt\":\"2026-10-20T05:03:30.227Z\",\"cycleId\":\"cyc_85e4992c-62b3-4004-97a8-44edb9c285b5\",\"dueLocalDate\":\"2026-10-19\",\"generationId\":\"g_default\",\"id\":\"cyc_85e4992c-62b3-4004-97a8-44edb9c285b5/SOIL_CHECK/1\",\"occurrenceSeq\":1,\"priority\":0,\"resolutionId\":\"c587c878-18ad-4ebe-b3de-cca9f8be9ef6\",\"resolutionType\":\"OBSERVATION\",\"revision\":3,\"schemaVersion\":1,\"status\":\"RESOLVED\",\"updatedAt\":\"2026-10-20T05:03:30.230Z\"},{\"actionKind\":\"SOIL_CHECK\",\"anchorId\":\"c587c878-18ad-4ebe-b3de-cca9f8be9ef6\",\"createdAt\":\"2026-10-20T05:03:30.230Z\",\"cycleId\":\"cyc_85e4992c-62b3-4004-97a8-44edb9c285b5\",\"dueLocalDate\":\"2026-10-17\",\"generationId\":\"g_default\",\"id\":\"cyc_85e4992c-62b3-4004-97a8-44edb9c285b5/SOIL_CHECK/2\",\"occurrenceSeq\":2,\"priority\":0,\"resolutionId\":null,\"resolutionType\":null,\"revision\":2,\"schemaVersion\":1,\"status\":\"OPEN\",\"updatedAt\":\"2026-10-20T05:03:30.230Z\"}]",
+        "nextState": "[{\"actionKind\":\"SOIL_CHECK\",\"anchorId\":\"cycle-start\",\"createdAt\":\"2026-10-20T05:03:30.212Z\",\"cycleId\":\"cyc_85e4992c-62b3-4004-97a8-44edb9c285b5\",\"dueLocalDate\":\"2026-10-01\",\"generationId\":\"g_default\",\"id\":\"cyc_85e4992c-62b3-4004-97a8-44edb9c285b5/SOIL_CHECK/0\",\"occurrenceSeq\":0,\"priority\":0,\"resolutionId\":\"96dcebb5-677f-4e66-a64e-63e240ad8516\",\"resolutionType\":\"CARE_EVENT\",\"revision\":3,\"schemaVersion\":1,\"status\":\"RESOLVED\",\"updatedAt\":\"2026-10-20T05:03:30.227Z\"},{\"actionKind\":\"SOIL_CHECK\",\"anchorId\":\"96dcebb5-677f-4e66-a64e-63e240ad8516\",\"createdAt\":\"2026-10-20T05:03:30.227Z\",\"cycleId\":\"cyc_85e4992c-62b3-4004-97a8-44edb9c285b5\",\"dueLocalDate\":\"2026-10-19\",\"generationId\":\"g_default\",\"id\":\"cyc_85e4992c-62b3-4004-97a8-44edb9c285b5/SOIL_CHECK/1\",\"occurrenceSeq\":1,\"priority\":0,\"resolutionId\":null,\"resolutionType\":null,\"revision\":5,\"schemaVersion\":1,\"status\":\"OPEN\",\"updatedAt\":\"2026-10-20T05:03:30.233Z\"},{\"actionKind\":\"SOIL_CHECK\",\"anchorId\":\"c587c878-18ad-4ebe-b3de-cca9f8be9ef6\",\"createdAt\":\"2026-10-20T05:03:30.230Z\",\"cycleId\":\"cyc_85e4992c-62b3-4004-97a8-44edb9c285b5\",\"dueLocalDate\":\"2026-10-17\",\"generationId\":\"g_default\",\"id\":\"cyc_85e4992c-62b3-4004-97a8-44edb9c285b5/SOIL_CHECK/2\",\"occurrenceSeq\":2,\"priority\":0,\"resolutionId\":null,\"resolutionType\":null,\"revision\":3,\"schemaVersion\":1,\"status\":\"CANCELLED\",\"updatedAt\":\"2026-10-20T05:03:30.233Z\"}]",
+        "sourceId": "fa77f898-3247-4e1c-871c-d41a7e0f86a0",
+        "idempotencyKey": "7937049b-25c3-4acb-9ea4-146534d08a2d",
+        "requestBody": "{\"cycleId\":\"cyc_85e4992c-62b3-4004-97a8-44edb9c285b5\",\"expectedRevision\":3,\"idempotencyKey\":\"7937049b-25c3-4acb-9ea4-146534d08a2d\",\"kind\":\"UNDO\",\"occurredAt\":\"2026-10-14T00:00:00.000Z\",\"targetId\":\"c587c878-18ad-4ebe-b3de-cca9f8be9ef6\",\"targetType\":\"OBSERVATION\",\"taskId\":\"cyc_85e4992c-62b3-4004-97a8-44edb9c285b5/SOIL_CHECK/1\"}",
+        "occurredAt": "2026-10-20T05:03:30.233Z",
+        "createdAt": "2026-10-20T05:03:30.233Z",
+        "updatedAt": "2026-10-20T05:03:30.233Z",
+        "revision": 1,
+        "schemaVersion": 1
+      },
+      {
+        "generationId": "g_default",
+        "id": "c16977eb-5082-4856-8ba3-e76cf5017a95",
+        "taskId": "cyc_85e4992c-62b3-4004-97a8-44edb9c285b5/SOIL_CHECK/1",
+        "previousState": "[{\"actionKind\":\"SOIL_CHECK\",\"anchorId\":\"cycle-start\",\"createdAt\":\"2026-10-20T05:03:30.212Z\",\"cycleId\":\"cyc_85e4992c-62b3-4004-97a8-44edb9c285b5\",\"dueLocalDate\":\"2026-10-01\",\"generationId\":\"g_default\",\"id\":\"cyc_85e4992c-62b3-4004-97a8-44edb9c285b5/SOIL_CHECK/0\",\"occurrenceSeq\":0,\"priority\":0,\"resolutionId\":\"96dcebb5-677f-4e66-a64e-63e240ad8516\",\"resolutionType\":\"CARE_EVENT\",\"revision\":3,\"schemaVersion\":1,\"status\":\"RESOLVED\",\"updatedAt\":\"2026-10-20T05:03:30.227Z\"},{\"actionKind\":\"SOIL_CHECK\",\"anchorId\":\"96dcebb5-677f-4e66-a64e-63e240ad8516\",\"createdAt\":\"2026-10-20T05:03:30.227Z\",\"cycleId\":\"cyc_85e4992c-62b3-4004-97a8-44edb9c285b5\",\"dueLocalDate\":\"2026-10-19\",\"generationId\":\"g_default\",\"id\":\"cyc_85e4992c-62b3-4004-97a8-44edb9c285b5/SOIL_CHECK/1\",\"occurrenceSeq\":1,\"priority\":0,\"resolutionId\":null,\"resolutionType\":null,\"revision\":5,\"schemaVersion\":1,\"status\":\"OPEN\",\"updatedAt\":\"2026-10-20T05:03:30.233Z\"},{\"actionKind\":\"SOIL_CHECK\",\"anchorId\":\"c587c878-18ad-4ebe-b3de-cca9f8be9ef6\",\"createdAt\":\"2026-10-20T05:03:30.230Z\",\"cycleId\":\"cyc_85e4992c-62b3-4004-97a8-44edb9c285b5\",\"dueLocalDate\":\"2026-10-17\",\"generationId\":\"g_default\",\"id\":\"cyc_85e4992c-62b3-4004-97a8-44edb9c285b5/SOIL_CHECK/2\",\"occurrenceSeq\":2,\"priority\":0,\"resolutionId\":null,\"resolutionType\":null,\"revision\":3,\"schemaVersion\":1,\"status\":\"CANCELLED\",\"updatedAt\":\"2026-10-20T05:03:30.233Z\"}]",
+        "nextState": "[{\"actionKind\":\"SOIL_CHECK\",\"anchorId\":\"cycle-start\",\"createdAt\":\"2026-10-20T05:03:30.212Z\",\"cycleId\":\"cyc_85e4992c-62b3-4004-97a8-44edb9c285b5\",\"dueLocalDate\":\"2026-10-01\",\"generationId\":\"g_default\",\"id\":\"cyc_85e4992c-62b3-4004-97a8-44edb9c285b5/SOIL_CHECK/0\",\"occurrenceSeq\":0,\"priority\":0,\"resolutionId\":\"96dcebb5-677f-4e66-a64e-63e240ad8516\",\"resolutionType\":\"CARE_EVENT\",\"revision\":3,\"schemaVersion\":1,\"status\":\"RESOLVED\",\"updatedAt\":\"2026-10-20T05:03:30.227Z\"},{\"actionKind\":\"SOIL_CHECK\",\"anchorId\":\"96dcebb5-677f-4e66-a64e-63e240ad8516\",\"createdAt\":\"2026-10-20T05:03:30.227Z\",\"cycleId\":\"cyc_85e4992c-62b3-4004-97a8-44edb9c285b5\",\"dueLocalDate\":\"2026-10-17\",\"generationId\":\"g_default\",\"id\":\"cyc_85e4992c-62b3-4004-97a8-44edb9c285b5/SOIL_CHECK/1\",\"occurrenceSeq\":1,\"priority\":0,\"resolutionId\":null,\"resolutionType\":null,\"revision\":6,\"schemaVersion\":1,\"status\":\"OPEN\",\"updatedAt\":\"2026-10-20T05:03:30.235Z\"},{\"actionKind\":\"SOIL_CHECK\",\"anchorId\":\"c587c878-18ad-4ebe-b3de-cca9f8be9ef6\",\"createdAt\":\"2026-10-20T05:03:30.230Z\",\"cycleId\":\"cyc_85e4992c-62b3-4004-97a8-44edb9c285b5\",\"dueLocalDate\":\"2026-10-17\",\"generationId\":\"g_default\",\"id\":\"cyc_85e4992c-62b3-4004-97a8-44edb9c285b5/SOIL_CHECK/2\",\"occurrenceSeq\":2,\"priority\":0,\"resolutionId\":null,\"resolutionType\":null,\"revision\":3,\"schemaVersion\":1,\"status\":\"CANCELLED\",\"updatedAt\":\"2026-10-20T05:03:30.233Z\"}]",
+        "sourceId": "e20ec620-aa35-4420-8b63-85db7cc0d83c",
+        "idempotencyKey": "7423bd83-0adc-4ca5-9668-6d06ced55942",
+        "requestBody": "{\"cycleId\":\"cyc_85e4992c-62b3-4004-97a8-44edb9c285b5\",\"expectedRevision\":2,\"idempotencyKey\":\"7423bd83-0adc-4ca5-9668-6d06ced55942\",\"inspectionDays\":3,\"kind\":\"RULE\",\"occurredAt\":\"2026-10-14T00:00:00.000Z\"}",
+        "occurredAt": "2026-10-20T05:03:30.235Z",
+        "createdAt": "2026-10-20T05:03:30.235Z",
+        "updatedAt": "2026-10-20T05:03:30.235Z",
+        "revision": 1,
+        "schemaVersion": 1
+      },
+      {
+        "generationId": "g_default",
+        "id": "d0f28221-a247-411e-b1e3-5c81789ba224",
+        "taskId": "cyc_85e4992c-62b3-4004-97a8-44edb9c285b5/SOIL_CHECK/1",
+        "previousState": "[{\"actionKind\":\"SOIL_CHECK\",\"anchorId\":\"cycle-start\",\"createdAt\":\"2026-10-20T05:03:30.212Z\",\"cycleId\":\"cyc_85e4992c-62b3-4004-97a8-44edb9c285b5\",\"dueLocalDate\":\"2026-10-01\",\"generationId\":\"g_default\",\"id\":\"cyc_85e4992c-62b3-4004-97a8-44edb9c285b5/SOIL_CHECK/0\",\"occurrenceSeq\":0,\"priority\":0,\"resolutionId\":\"96dcebb5-677f-4e66-a64e-63e240ad8516\",\"resolutionType\":\"CARE_EVENT\",\"revision\":3,\"schemaVersion\":1,\"status\":\"RESOLVED\",\"updatedAt\":\"2026-10-20T05:03:30.227Z\"},{\"actionKind\":\"SOIL_CHECK\",\"anchorId\":\"96dcebb5-677f-4e66-a64e-63e240ad8516\",\"createdAt\":\"2026-10-20T05:03:30.227Z\",\"cycleId\":\"cyc_85e4992c-62b3-4004-97a8-44edb9c285b5\",\"dueLocalDate\":\"2026-10-19\",\"generationId\":\"g_default\",\"id\":\"cyc_85e4992c-62b3-4004-97a8-44edb9c285b5/SOIL_CHECK/1\",\"occurrenceSeq\":1,\"priority\":0,\"resolutionId\":null,\"resolutionType\":null,\"revision\":2,\"schemaVersion\":1,\"status\":\"OPEN\",\"updatedAt\":\"2026-10-20T05:03:30.227Z\"}]",
+        "nextState": "[{\"actionKind\":\"SOIL_CHECK\",\"anchorId\":\"cycle-start\",\"createdAt\":\"2026-10-20T05:03:30.212Z\",\"cycleId\":\"cyc_85e4992c-62b3-4004-97a8-44edb9c285b5\",\"dueLocalDate\":\"2026-10-01\",\"generationId\":\"g_default\",\"id\":\"cyc_85e4992c-62b3-4004-97a8-44edb9c285b5/SOIL_CHECK/0\",\"occurrenceSeq\":0,\"priority\":0,\"resolutionId\":\"96dcebb5-677f-4e66-a64e-63e240ad8516\",\"resolutionType\":\"CARE_EVENT\",\"revision\":3,\"schemaVersion\":1,\"status\":\"RESOLVED\",\"updatedAt\":\"2026-10-20T05:03:30.227Z\"},{\"actionKind\":\"SOIL_CHECK\",\"anchorId\":\"96dcebb5-677f-4e66-a64e-63e240ad8516\",\"createdAt\":\"2026-10-20T05:03:30.227Z\",\"cycleId\":\"cyc_85e4992c-62b3-4004-97a8-44edb9c285b5\",\"dueLocalDate\":\"2026-10-19\",\"generationId\":\"g_default\",\"id\":\"cyc_85e4992c-62b3-4004-97a8-44edb9c285b5/SOIL_CHECK/1\",\"occurrenceSeq\":1,\"priority\":0,\"resolutionId\":\"c587c878-18ad-4ebe-b3de-cca9f8be9ef6\",\"resolutionType\":\"OBSERVATION\",\"revision\":3,\"schemaVersion\":1,\"status\":\"RESOLVED\",\"updatedAt\":\"2026-10-20T05:03:30.230Z\"},{\"actionKind\":\"SOIL_CHECK\",\"anchorId\":\"c587c878-18ad-4ebe-b3de-cca9f8be9ef6\",\"createdAt\":\"2026-10-20T05:03:30.230Z\",\"cycleId\":\"cyc_85e4992c-62b3-4004-97a8-44edb9c285b5\",\"dueLocalDate\":\"2026-10-17\",\"generationId\":\"g_default\",\"id\":\"cyc_85e4992c-62b3-4004-97a8-44edb9c285b5/SOIL_CHECK/2\",\"occurrenceSeq\":2,\"priority\":0,\"resolutionId\":null,\"resolutionType\":null,\"revision\":2,\"schemaVersion\":1,\"status\":\"OPEN\",\"updatedAt\":\"2026-10-20T05:03:30.230Z\"}]",
+        "sourceId": "c587c878-18ad-4ebe-b3de-cca9f8be9ef6",
+        "idempotencyKey": "c8d4c90f-e3a4-46b2-beda-3b52a5d8be35",
+        "requestBody": "{\"cycleId\":\"cyc_85e4992c-62b3-4004-97a8-44edb9c285b5\",\"expectedRevision\":2,\"idempotencyKey\":\"c8d4c90f-e3a4-46b2-beda-3b52a5d8be35\",\"kind\":\"MOIST\",\"occurredAt\":\"2026-10-15T00:00:00.000Z\",\"taskId\":\"cyc_85e4992c-62b3-4004-97a8-44edb9c285b5/SOIL_CHECK/1\"}",
+        "occurredAt": "2026-10-20T05:03:30.230Z",
+        "createdAt": "2026-10-20T05:03:30.230Z",
+        "updatedAt": "2026-10-20T05:03:30.230Z",
+        "revision": 1,
+        "schemaVersion": 1
+      }
+    ],
+    "careRules": [
+      {
+        "generationId": "g_default",
+        "id": "dba8ce6f-c2cb-4df8-8c8f-a0b78208f617",
+        "version": "1",
+        "actionKind": "SOIL_CHECK",
+        "inspectionDays": 5,
+        "cycleId": "cyc_85e4992c-62b3-4004-97a8-44edb9c285b5",
+        "applicability": "CYCLE",
+        "provenance": "USER_OVERRIDE",
+        "createdAt": "2026-10-20T05:03:30.212Z",
+        "updatedAt": "2026-10-20T05:03:30.212Z",
+        "revision": 1,
+        "schemaVersion": 1
+      },
+      {
+        "generationId": "g_default",
+        "id": "e20ec620-aa35-4420-8b63-85db7cc0d83c",
+        "version": "2",
+        "actionKind": "SOIL_CHECK",
+        "inspectionDays": 3,
+        "cycleId": "cyc_85e4992c-62b3-4004-97a8-44edb9c285b5",
+        "applicability": "CYCLE",
+        "provenance": "USER_OVERRIDE",
+        "createdAt": "2026-10-20T05:03:30.235Z",
+        "updatedAt": "2026-10-20T05:03:30.235Z",
+        "revision": 2,
+        "schemaVersion": 1
+      }
+    ],
+    "ruleSnapshots": [
+      {
+        "generationId": "g_default",
+        "id": "rule/dba8ce6f-c2cb-4df8-8c8f-a0b78208f617",
+        "stableRuleId": "dba8ce6f-c2cb-4df8-8c8f-a0b78208f617",
+        "version": "1",
+        "normalizedBody": "{\"id\":\"dba8ce6f-c2cb-4df8-8c8f-a0b78208f617\",\"inspectionDays\":5,\"kind\":\"SOIL_CHECK\",\"provenance\":\"USER_OVERRIDE\",\"version\":\"1\"}",
+        "sha256": "0f16c2b00b92e777e47083f912e5427c9af877537bfb66ea3afccb8c990d8364",
+        "createdAt": "2026-10-20T05:03:30.212Z",
+        "updatedAt": "2026-10-20T05:03:30.212Z",
+        "revision": 1,
+        "schemaVersion": 1
+      },
+      {
+        "generationId": "g_default",
+        "id": "rule/e20ec620-aa35-4420-8b63-85db7cc0d83c",
+        "stableRuleId": "e20ec620-aa35-4420-8b63-85db7cc0d83c",
+        "version": "2",
+        "normalizedBody": "{\"id\":\"e20ec620-aa35-4420-8b63-85db7cc0d83c\",\"inspectionDays\":3,\"kind\":\"SOIL_CHECK\",\"provenance\":\"USER_OVERRIDE\",\"version\":\"2\"}",
+        "sha256": "7c0647500f0a680f0f7c743a89f22afa344acd6c52dbba4e16436030c07cadf9",
+        "createdAt": "2026-10-20T05:03:30.235Z",
+        "updatedAt": "2026-10-20T05:03:30.235Z",
+        "revision": 1,
+        "schemaVersion": 1
+      }
+    ],
+    "decisionLogs": [
+      {
+        "generationId": "g_default",
+        "id": "579193b7-a81f-4523-8cba-351e38daf303",
+        "targetType": "TASK",
+        "targetId": "cyc_85e4992c-62b3-4004-97a8-44edb9c285b5/SOIL_CHECK/1",
+        "algorithmVersion": "rules-v1",
+        "inputSnapshot": "{\"algorithmVersion\":\"rules-v1\",\"cycleId\":\"cyc_85e4992c-62b3-4004-97a8-44edb9c285b5\",\"cycleStatus\":\"ACTIVE\",\"effectiveCareEvents\":[{\"id\":\"96dcebb5-677f-4e66-a64e-63e240ad8516\",\"kind\":\"WATERED\",\"occurredAt\":\"2026-10-14T00:00:00.000Z\"}],\"effectiveObservations\":[],\"environmentSnapshot\":{\"createdAt\":\"2026-10-20T05:03:30.206Z\",\"environmentType\":\"INDOOR\",\"generationId\":\"g_default\",\"id\":\"loc_indoor_living\",\"label\":\"거실 창가 (실내)\",\"rainfallExposure\":\"COVERED\",\"recordStatus\":\"ACTIVE\",\"revision\":1,\"schemaVersion\":1,\"sunExposure\":\"PARTIAL_SUN\",\"timeZone\":\"Asia/Seoul\",\"updatedAt\":\"2026-10-20T05:03:30.206Z\"},\"generationId\":\"g_default\",\"nowUtc\":\"2026-10-20T05:03:30.235Z\",\"previousOccurrence\":{\"actionKind\":\"SOIL_CHECK\",\"anchorId\":\"96dcebb5-677f-4e66-a64e-63e240ad8516\",\"createdAt\":\"2026-10-20T05:03:30.227Z\",\"cycleId\":\"cyc_85e4992c-62b3-4004-97a8-44edb9c285b5\",\"dueLocalDate\":\"2026-10-19\",\"generationId\":\"g_default\",\"id\":\"cyc_85e4992c-62b3-4004-97a8-44edb9c285b5/SOIL_CHECK/1\",\"occurrenceSeq\":1,\"priority\":0,\"resolutionId\":null,\"resolutionType\":null,\"revision\":5,\"schemaVersion\":1,\"status\":\"OPEN\",\"updatedAt\":\"2026-10-20T05:03:30.233Z\"},\"startLocalDate\":\"2026-10-01\",\"timeZone\":\"Asia/Seoul\",\"weather\":null}",
+        "inputDigest": "c57da43f1ee7d0c66ef5b31acae25a1897d4036625c259d58f53a44db54f9746",
+        "ruleSnapshotHash": "7c0647500f0a680f0f7c743a89f22afa344acd6c52dbba4e16436030c07cadf9",
+        "ruleSnapshotIds": [
+          "rule/e20ec620-aa35-4420-8b63-85db7cc0d83c"
+        ],
+        "outputSnapshot": "{\"dueLocalDate\":\"2026-10-17\",\"evidence\":{\"algorithmVersion\":\"rules-v1\",\"inputDigest\":\"c57da43f1ee7d0c66ef5b31acae25a1897d4036625c259d58f53a44db54f9746\",\"ruleSnapshotHash\":\"7c0647500f0a680f0f7c743a89f22afa344acd6c52dbba4e16436030c07cadf9\",\"ruleSnapshotId\":\"e20ec620-aa35-4420-8b63-85db7cc0d83c\"},\"occurrenceSeq\":1,\"reasonCodes\":[\"WATERED\",\"USER_OVERRIDE\"],\"recommendationState\":\"INSPECTION_DUE\",\"taskKind\":\"SOIL_CHECK\"}",
+        "evaluatedAt": "2026-10-20T05:03:30.235Z",
+        "idempotencyKey": "7423bd83-0adc-4ca5-9668-6d06ced55942",
+        "requestBody": "{\"cycleId\":\"cyc_85e4992c-62b3-4004-97a8-44edb9c285b5\",\"expectedRevision\":2,\"idempotencyKey\":\"7423bd83-0adc-4ca5-9668-6d06ced55942\",\"inspectionDays\":3,\"kind\":\"RULE\",\"occurredAt\":\"2026-10-14T00:00:00.000Z\"}",
+        "resultTaskId": "cyc_85e4992c-62b3-4004-97a8-44edb9c285b5/SOIL_CHECK/1",
+        "createdAt": "2026-10-20T05:03:30.235Z",
+        "updatedAt": "2026-10-20T05:03:30.235Z",
+        "revision": 1,
+        "schemaVersion": 1
+      },
+      {
+        "generationId": "g_default",
+        "id": "61e2e5f0-9d9f-4cd8-881b-a23966a40247",
+        "targetType": "TASK",
+        "targetId": "cyc_85e4992c-62b3-4004-97a8-44edb9c285b5/SOIL_CHECK/1",
+        "algorithmVersion": "rules-v1",
+        "inputSnapshot": "{\"algorithmVersion\":\"rules-v1\",\"cycleId\":\"cyc_85e4992c-62b3-4004-97a8-44edb9c285b5\",\"cycleStatus\":\"ACTIVE\",\"effectiveCareEvents\":[{\"id\":\"96dcebb5-677f-4e66-a64e-63e240ad8516\",\"kind\":\"WATERED\",\"occurredAt\":\"2026-10-14T00:00:00.000Z\"}],\"effectiveObservations\":[],\"environmentSnapshot\":{\"createdAt\":\"2026-10-20T05:03:30.206Z\",\"environmentType\":\"INDOOR\",\"generationId\":\"g_default\",\"id\":\"loc_indoor_living\",\"label\":\"거실 창가 (실내)\",\"rainfallExposure\":\"COVERED\",\"recordStatus\":\"ACTIVE\",\"revision\":1,\"schemaVersion\":1,\"sunExposure\":\"PARTIAL_SUN\",\"timeZone\":\"Asia/Seoul\",\"updatedAt\":\"2026-10-20T05:03:30.206Z\"},\"generationId\":\"g_default\",\"nowUtc\":\"2026-10-20T05:03:30.227Z\",\"previousOccurrence\":{\"actionKind\":\"SOIL_CHECK\",\"anchorId\":\"cycle-start\",\"createdAt\":\"2026-10-20T05:03:30.227Z\",\"cycleId\":\"cyc_85e4992c-62b3-4004-97a8-44edb9c285b5\",\"dueLocalDate\":\"2026-10-01\",\"generationId\":\"g_default\",\"id\":\"cyc_85e4992c-62b3-4004-97a8-44edb9c285b5/SOIL_CHECK/1\",\"occurrenceSeq\":1,\"priority\":0,\"resolutionId\":null,\"resolutionType\":null,\"revision\":1,\"schemaVersion\":1,\"status\":\"OPEN\",\"updatedAt\":\"2026-10-20T05:03:30.227Z\"},\"startLocalDate\":\"2026-10-01\",\"timeZone\":\"Asia/Seoul\",\"weather\":null}",
+        "inputDigest": "92b20e2d721d2878f4a9b219b7e5ef866fe1e77aae38b1e3258e4ce0c0698738",
+        "ruleSnapshotHash": "0f16c2b00b92e777e47083f912e5427c9af877537bfb66ea3afccb8c990d8364",
+        "ruleSnapshotIds": [
+          "rule/dba8ce6f-c2cb-4df8-8c8f-a0b78208f617"
+        ],
+        "outputSnapshot": "{\"dueLocalDate\":\"2026-10-19\",\"evidence\":{\"algorithmVersion\":\"rules-v1\",\"inputDigest\":\"92b20e2d721d2878f4a9b219b7e5ef866fe1e77aae38b1e3258e4ce0c0698738\",\"ruleSnapshotHash\":\"0f16c2b00b92e777e47083f912e5427c9af877537bfb66ea3afccb8c990d8364\",\"ruleSnapshotId\":\"dba8ce6f-c2cb-4df8-8c8f-a0b78208f617\"},\"occurrenceSeq\":1,\"reasonCodes\":[\"WATERED\",\"USER_OVERRIDE\"],\"recommendationState\":\"INSPECTION_DUE\",\"taskKind\":\"SOIL_CHECK\"}",
+        "evaluatedAt": "2026-10-20T05:03:30.227Z",
+        "idempotencyKey": "bcb26aea-0adb-4915-b826-0d7bc4f9ada3",
+        "requestBody": "{\"cycleId\":\"cyc_85e4992c-62b3-4004-97a8-44edb9c285b5\",\"expectedRevision\":2,\"idempotencyKey\":\"bcb26aea-0adb-4915-b826-0d7bc4f9ada3\",\"kind\":\"WATERED\",\"occurredAt\":\"2026-10-14T00:00:00.000Z\",\"taskId\":\"cyc_85e4992c-62b3-4004-97a8-44edb9c285b5/SOIL_CHECK/0\"}",
+        "resultTaskId": "cyc_85e4992c-62b3-4004-97a8-44edb9c285b5/SOIL_CHECK/0",
+        "createdAt": "2026-10-20T05:03:30.227Z",
+        "updatedAt": "2026-10-20T05:03:30.227Z",
+        "revision": 1,
+        "schemaVersion": 1
+      },
+      {
+        "generationId": "g_default",
+        "id": "8075130b-37b2-4ddf-9fe3-b18a90b51870",
+        "targetType": "TASK",
+        "targetId": "cyc_85e4992c-62b3-4004-97a8-44edb9c285b5/SOIL_CHECK/2",
+        "algorithmVersion": "rules-v1",
+        "inputSnapshot": "{\"algorithmVersion\":\"rules-v1\",\"cycleId\":\"cyc_85e4992c-62b3-4004-97a8-44edb9c285b5\",\"cycleStatus\":\"ACTIVE\",\"effectiveCareEvents\":[{\"id\":\"96dcebb5-677f-4e66-a64e-63e240ad8516\",\"kind\":\"WATERED\",\"occurredAt\":\"2026-10-14T00:00:00.000Z\"}],\"effectiveObservations\":[{\"id\":\"c587c878-18ad-4ebe-b3de-cca9f8be9ef6\",\"kind\":\"MOIST\",\"occurredAt\":\"2026-10-15T00:00:00.000Z\"}],\"environmentSnapshot\":{\"createdAt\":\"2026-10-20T05:03:30.206Z\",\"environmentType\":\"INDOOR\",\"generationId\":\"g_default\",\"id\":\"loc_indoor_living\",\"label\":\"거실 창가 (실내)\",\"rainfallExposure\":\"COVERED\",\"recordStatus\":\"ACTIVE\",\"revision\":1,\"schemaVersion\":1,\"sunExposure\":\"PARTIAL_SUN\",\"timeZone\":\"Asia/Seoul\",\"updatedAt\":\"2026-10-20T05:03:30.206Z\"},\"generationId\":\"g_default\",\"nowUtc\":\"2026-10-20T05:03:30.230Z\",\"previousOccurrence\":{\"actionKind\":\"SOIL_CHECK\",\"anchorId\":\"cycle-start\",\"createdAt\":\"2026-10-20T05:03:30.230Z\",\"cycleId\":\"cyc_85e4992c-62b3-4004-97a8-44edb9c285b5\",\"dueLocalDate\":\"2026-10-01\",\"generationId\":\"g_default\",\"id\":\"cyc_85e4992c-62b3-4004-97a8-44edb9c285b5/SOIL_CHECK/2\",\"occurrenceSeq\":2,\"priority\":0,\"resolutionId\":null,\"resolutionType\":null,\"revision\":1,\"schemaVersion\":1,\"status\":\"OPEN\",\"updatedAt\":\"2026-10-20T05:03:30.230Z\"},\"startLocalDate\":\"2026-10-01\",\"timeZone\":\"Asia/Seoul\",\"weather\":null}",
+        "inputDigest": "1ee0d7dca953fb4e71166e64ddfd25d2c6fa78c2a938ebe4446b311c1b2a15fb",
+        "ruleSnapshotHash": "0f16c2b00b92e777e47083f912e5427c9af877537bfb66ea3afccb8c990d8364",
+        "ruleSnapshotIds": [
+          "rule/dba8ce6f-c2cb-4df8-8c8f-a0b78208f617"
+        ],
+        "outputSnapshot": "{\"dueLocalDate\":\"2026-10-17\",\"evidence\":{\"algorithmVersion\":\"rules-v1\",\"inputDigest\":\"1ee0d7dca953fb4e71166e64ddfd25d2c6fa78c2a938ebe4446b311c1b2a15fb\",\"ruleSnapshotHash\":\"0f16c2b00b92e777e47083f912e5427c9af877537bfb66ea3afccb8c990d8364\",\"ruleSnapshotId\":\"dba8ce6f-c2cb-4df8-8c8f-a0b78208f617\"},\"occurrenceSeq\":2,\"reasonCodes\":[\"MOIST\",\"USER_OVERRIDE\"],\"recommendationState\":\"INSPECTION_DUE\",\"taskKind\":\"SOIL_CHECK\"}",
+        "evaluatedAt": "2026-10-20T05:03:30.230Z",
+        "idempotencyKey": "c8d4c90f-e3a4-46b2-beda-3b52a5d8be35",
+        "requestBody": "{\"cycleId\":\"cyc_85e4992c-62b3-4004-97a8-44edb9c285b5\",\"expectedRevision\":2,\"idempotencyKey\":\"c8d4c90f-e3a4-46b2-beda-3b52a5d8be35\",\"kind\":\"MOIST\",\"occurredAt\":\"2026-10-15T00:00:00.000Z\",\"taskId\":\"cyc_85e4992c-62b3-4004-97a8-44edb9c285b5/SOIL_CHECK/1\"}",
+        "resultTaskId": "cyc_85e4992c-62b3-4004-97a8-44edb9c285b5/SOIL_CHECK/1",
+        "createdAt": "2026-10-20T05:03:30.230Z",
+        "updatedAt": "2026-10-20T05:03:30.230Z",
+        "revision": 1,
+        "schemaVersion": 1
+      },
+      {
+        "generationId": "g_default",
+        "id": "a4d5f450-99b6-45cc-bffc-1850d8f65063",
+        "targetType": "TASK",
+        "targetId": "cyc_85e4992c-62b3-4004-97a8-44edb9c285b5/SOIL_CHECK/1",
+        "algorithmVersion": "rules-v1",
+        "inputSnapshot": "{\"algorithmVersion\":\"rules-v1\",\"cycleId\":\"cyc_85e4992c-62b3-4004-97a8-44edb9c285b5\",\"cycleStatus\":\"ACTIVE\",\"effectiveCareEvents\":[{\"id\":\"96dcebb5-677f-4e66-a64e-63e240ad8516\",\"kind\":\"WATERED\",\"occurredAt\":\"2026-10-14T00:00:00.000Z\"}],\"effectiveObservations\":[],\"environmentSnapshot\":{\"createdAt\":\"2026-10-20T05:03:30.206Z\",\"environmentType\":\"INDOOR\",\"generationId\":\"g_default\",\"id\":\"loc_indoor_living\",\"label\":\"거실 창가 (실내)\",\"rainfallExposure\":\"COVERED\",\"recordStatus\":\"ACTIVE\",\"revision\":1,\"schemaVersion\":1,\"sunExposure\":\"PARTIAL_SUN\",\"timeZone\":\"Asia/Seoul\",\"updatedAt\":\"2026-10-20T05:03:30.206Z\"},\"generationId\":\"g_default\",\"nowUtc\":\"2026-10-20T05:03:30.233Z\",\"previousOccurrence\":{\"actionKind\":\"SOIL_CHECK\",\"anchorId\":\"96dcebb5-677f-4e66-a64e-63e240ad8516\",\"createdAt\":\"2026-10-20T05:03:30.227Z\",\"cycleId\":\"cyc_85e4992c-62b3-4004-97a8-44edb9c285b5\",\"dueLocalDate\":\"2026-10-19\",\"generationId\":\"g_default\",\"id\":\"cyc_85e4992c-62b3-4004-97a8-44edb9c285b5/SOIL_CHECK/1\",\"occurrenceSeq\":1,\"priority\":0,\"resolutionId\":null,\"resolutionType\":null,\"revision\":4,\"schemaVersion\":1,\"status\":\"OPEN\",\"updatedAt\":\"2026-10-20T05:03:30.233Z\"},\"startLocalDate\":\"2026-10-01\",\"timeZone\":\"Asia/Seoul\",\"weather\":null}",
+        "inputDigest": "be278e17316827dc8279017746cc12a847e11a5aba6d67673dd872a77b9d1e70",
+        "ruleSnapshotHash": "0f16c2b00b92e777e47083f912e5427c9af877537bfb66ea3afccb8c990d8364",
+        "ruleSnapshotIds": [
+          "rule/dba8ce6f-c2cb-4df8-8c8f-a0b78208f617"
+        ],
+        "outputSnapshot": "{\"dueLocalDate\":\"2026-10-19\",\"evidence\":{\"algorithmVersion\":\"rules-v1\",\"inputDigest\":\"be278e17316827dc8279017746cc12a847e11a5aba6d67673dd872a77b9d1e70\",\"ruleSnapshotHash\":\"0f16c2b00b92e777e47083f912e5427c9af877537bfb66ea3afccb8c990d8364\",\"ruleSnapshotId\":\"dba8ce6f-c2cb-4df8-8c8f-a0b78208f617\"},\"occurrenceSeq\":1,\"reasonCodes\":[\"WATERED\",\"USER_OVERRIDE\"],\"recommendationState\":\"INSPECTION_DUE\",\"taskKind\":\"SOIL_CHECK\"}",
+        "evaluatedAt": "2026-10-20T05:03:30.233Z",
+        "idempotencyKey": "7937049b-25c3-4acb-9ea4-146534d08a2d",
+        "requestBody": "{\"cycleId\":\"cyc_85e4992c-62b3-4004-97a8-44edb9c285b5\",\"expectedRevision\":3,\"idempotencyKey\":\"7937049b-25c3-4acb-9ea4-146534d08a2d\",\"kind\":\"UNDO\",\"occurredAt\":\"2026-10-14T00:00:00.000Z\",\"targetId\":\"c587c878-18ad-4ebe-b3de-cca9f8be9ef6\",\"targetType\":\"OBSERVATION\",\"taskId\":\"cyc_85e4992c-62b3-4004-97a8-44edb9c285b5/SOIL_CHECK/1\"}",
+        "resultTaskId": "cyc_85e4992c-62b3-4004-97a8-44edb9c285b5/SOIL_CHECK/1",
+        "createdAt": "2026-10-20T05:03:30.233Z",
+        "updatedAt": "2026-10-20T05:03:30.233Z",
+        "revision": 1,
+        "schemaVersion": 1
+      },
+      {
+        "generationId": "g_default",
+        "id": "cf4d793d-9d1f-4684-8ae5-8bd29ea6419d",
+        "targetType": "TASK",
+        "targetId": "cyc_85e4992c-62b3-4004-97a8-44edb9c285b5/SOIL_CHECK/0",
+        "algorithmVersion": "rules-v1",
+        "inputSnapshot": "{\"algorithmVersion\":\"rules-v1\",\"cycleId\":\"cyc_85e4992c-62b3-4004-97a8-44edb9c285b5\",\"cycleStatus\":\"ACTIVE\",\"effectiveCareEvents\":[],\"effectiveObservations\":[],\"environmentSnapshot\":{\"createdAt\":\"2026-10-20T05:03:30.206Z\",\"environmentType\":\"INDOOR\",\"generationId\":\"g_default\",\"id\":\"loc_indoor_living\",\"label\":\"거실 창가 (실내)\",\"rainfallExposure\":\"COVERED\",\"recordStatus\":\"ACTIVE\",\"revision\":1,\"schemaVersion\":1,\"sunExposure\":\"PARTIAL_SUN\",\"timeZone\":\"Asia/Seoul\",\"updatedAt\":\"2026-10-20T05:03:30.206Z\"},\"generationId\":\"g_default\",\"nowUtc\":\"2026-10-20T05:03:30.212Z\",\"previousOccurrence\":{\"actionKind\":\"SOIL_CHECK\",\"anchorId\":\"cycle-start\",\"createdAt\":\"2026-10-20T05:03:30.212Z\",\"cycleId\":\"cyc_85e4992c-62b3-4004-97a8-44edb9c285b5\",\"dueLocalDate\":\"2026-10-01\",\"generationId\":\"g_default\",\"id\":\"cyc_85e4992c-62b3-4004-97a8-44edb9c285b5/SOIL_CHECK/0\",\"occurrenceSeq\":0,\"priority\":0,\"resolutionId\":null,\"resolutionType\":null,\"revision\":1,\"schemaVersion\":1,\"status\":\"OPEN\",\"updatedAt\":\"2026-10-20T05:03:30.212Z\"},\"startLocalDate\":\"2026-10-01\",\"timeZone\":\"Asia/Seoul\",\"weather\":null}",
+        "inputDigest": "9f9c9d970f441fe9b224d25abd0e584d4e07d77948c839ad6b6b46b55746e5d1",
+        "ruleSnapshotHash": "0f16c2b00b92e777e47083f912e5427c9af877537bfb66ea3afccb8c990d8364",
+        "ruleSnapshotIds": [
+          "rule/dba8ce6f-c2cb-4df8-8c8f-a0b78208f617"
+        ],
+        "outputSnapshot": "{\"dueLocalDate\":\"2026-10-01\",\"evidence\":{\"algorithmVersion\":\"rules-v1\",\"inputDigest\":\"9f9c9d970f441fe9b224d25abd0e584d4e07d77948c839ad6b6b46b55746e5d1\",\"ruleSnapshotHash\":\"0f16c2b00b92e777e47083f912e5427c9af877537bfb66ea3afccb8c990d8364\",\"ruleSnapshotId\":\"dba8ce6f-c2cb-4df8-8c8f-a0b78208f617\"},\"occurrenceSeq\":0,\"reasonCodes\":[\"CYCLE_START\",\"USER_OVERRIDE\"],\"recommendationState\":\"INSPECTION_DUE\",\"taskKind\":\"SOIL_CHECK\"}",
+        "evaluatedAt": "2026-10-20T05:03:30.212Z",
+        "idempotencyKey": "085334b5-d55b-4bcf-93ef-756dbac0f5a1",
+        "requestBody": "{\"cycleId\":\"cyc_85e4992c-62b3-4004-97a8-44edb9c285b5\",\"expectedRevision\":1,\"idempotencyKey\":\"085334b5-d55b-4bcf-93ef-756dbac0f5a1\",\"inspectionDays\":5,\"kind\":\"RULE\",\"occurredAt\":\"2026-10-14T00:00:00.000Z\"}",
+        "resultTaskId": "cyc_85e4992c-62b3-4004-97a8-44edb9c285b5/SOIL_CHECK/0",
+        "createdAt": "2026-10-20T05:03:30.212Z",
+        "updatedAt": "2026-10-20T05:03:30.212Z",
+        "revision": 1,
+        "schemaVersion": 1
+      }
+    ],
+    "diaries": [],
+    "media": [],
+    "mediaBlobs": [],
+    "mediaLinks": [],
+    "harvests": [],
+    "riskNotices": [],
+    "feedbackOverrides": []
+  }
+}

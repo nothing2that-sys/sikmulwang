@@ -194,6 +194,7 @@ export interface CareRuleRecord extends CareRecordMeta {
 }
 
 export interface RuleSnapshotRecord extends CareRecordMeta {
+  aliasOfId?: string;
   generationId: string;
   id: string;
   stableRuleId: string;
