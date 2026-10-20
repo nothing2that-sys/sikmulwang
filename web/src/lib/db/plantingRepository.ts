@@ -9,7 +9,12 @@ import type {
 } from "./types";
 import { withWriteTransaction } from "./transaction";
 import { ConflictError, NotFoundError, ValidationError } from "./errors";
-import { validateLocalDate, validateQuantity } from "./validators";
+import {
+  validateEffectiveTimestamp,
+  validateExpectedRevision,
+  validateLocalDate,
+  validateQuantity,
+} from "./validators";
 
 export interface CreatePlantingParams {
   displayName: string;
@@ -27,7 +32,7 @@ export interface UpdatePlantingParams {
   unit?: string;
   growingStatus?: GrowingStatus;
   taxonSnapshotId?: string | null;
-  expectedRevision?: number;
+  expectedRevision: number;
 }
 
 const VALID_GROUP_TYPES: readonly GroupType[] = ["INDIVIDUAL", "GROUP"];
@@ -99,16 +104,32 @@ export async function createPlanting(
     validateLocalDate(params.startLocalDate, "시즌 시작일");
   }
 
+  if (params.taxonSnapshotId !== undefined && params.taxonSnapshotId !== null) {
+    if (typeof params.taxonSnapshotId !== "string" || !params.taxonSnapshotId.trim()) {
+      throw new ValidationError("올바르지 않은 분류 스냅샷 ID입니다.");
+    }
+  }
+
   const plantingId = `plt_${crypto.randomUUID()}`;
   const envHistoryId = `envh_${crypto.randomUUID()}`;
   const cycleId = params.startLocalDate ? `cyc_${crypto.randomUUID()}` : undefined;
 
   return await withWriteTransaction(
     db,
-    [db.plantings, db.environmentHistory, db.locations, db.cycles],
+    [db.plantings, db.environmentHistory, db.locations, db.cycles, db.taxonSnapshots],
     sessionEpoch,
     sessionGenerationId,
     async ({ generationId, nowUtc }) => {
+      //+_+// Verify taxon snapshot existence in the active generation if provided
+      if (params.taxonSnapshotId) {
+        const taxon = await db.taxonSnapshots.get([generationId, params.taxonSnapshotId]);
+        if (!taxon) {
+          throw new NotFoundError(
+            `지정된 분류 스냅샷을 찾을 수 없습니다: ${params.taxonSnapshotId}`
+          );
+        }
+      }
+
       //+_+// Verify location existence and ensure it is not trashed or purged
       const loc = await db.locations.get([generationId, params.locationId]);
       if (!loc || loc.recordStatus === "PURGED") {
@@ -194,6 +215,8 @@ export async function updatePlanting(
   id: string,
   updates: UpdatePlantingParams
 ): Promise<PlantingRecord> {
+  const expectedRevision = validateExpectedRevision(updates.expectedRevision);
+
   if (updates.displayName !== undefined && !updates.displayName.trim()) {
     throw new ValidationError("식물 이름을 비워둘 수 없습니다.");
   }
@@ -204,9 +227,15 @@ export async function updatePlanting(
     throw new ValidationError(`올바르지 않은 생육 상태입니다: ${updates.growingStatus}`);
   }
 
+  if (updates.taxonSnapshotId !== undefined && updates.taxonSnapshotId !== null) {
+    if (typeof updates.taxonSnapshotId !== "string" || !updates.taxonSnapshotId.trim()) {
+      throw new ValidationError("올바르지 않은 분류 스냅샷 ID입니다.");
+    }
+  }
+
   return await withWriteTransaction(
     db,
-    [db.plantings],
+    [db.plantings, db.taxonSnapshots],
     sessionEpoch,
     sessionGenerationId,
     async ({ generationId, nowUtc }) => {
@@ -215,15 +244,22 @@ export async function updatePlanting(
         throw new NotFoundError(`식물을 찾을 수 없습니다: ${id}`);
       }
 
-      if (
-        updates.expectedRevision !== undefined &&
-        existing.revision !== updates.expectedRevision
-      ) {
+      if (existing.revision !== expectedRevision) {
         throw new ConflictError(
-          `식물 수정 충돌: 현재 revision(${existing.revision})이 기대값(${updates.expectedRevision})과 다릅니다.`,
+          `식물 수정 충돌: 현재 revision(${existing.revision})이 기대값(${expectedRevision})과 다릅니다.`,
           existing.revision,
-          updates.expectedRevision
+          expectedRevision
         );
+      }
+
+      //+_+// Verify taxon snapshot existence if updated and not null
+      if (updates.taxonSnapshotId) {
+        const taxon = await db.taxonSnapshots.get([generationId, updates.taxonSnapshotId]);
+        if (!taxon) {
+          throw new NotFoundError(
+            `지정된 분류 스냅샷을 찾을 수 없습니다: ${updates.taxonSnapshotId}`
+          );
+        }
       }
 
       const updated: PlantingRecord = {
@@ -254,9 +290,14 @@ export async function movePlantingLocation(
   sessionGenerationId: string,
   plantingId: string,
   newLocationId: string,
-  effectiveAt?: string,
-  expectedRevision?: number
+  effectiveAt: string | undefined,
+  expectedRevision: number
 ): Promise<PlantingRecord> {
+  const validExpectedRev = validateExpectedRevision(expectedRevision);
+  if (effectiveAt !== undefined) {
+    validateEffectiveTimestamp(effectiveAt, "장소 이동 시각");
+  }
+
   return await withWriteTransaction(
     db,
     [db.plantings, db.environmentHistory, db.locations],
@@ -268,14 +309,11 @@ export async function movePlantingLocation(
         throw new NotFoundError(`식물을 찾을 수 없습니다: ${plantingId}`);
       }
 
-      if (
-        expectedRevision !== undefined &&
-        planting.revision !== expectedRevision
-      ) {
+      if (planting.revision !== validExpectedRev) {
         throw new ConflictError(
-          `식물 장소 이동 충돌: 현재 revision(${planting.revision})이 기대값(${expectedRevision})과 다릅니다.`,
+          `식물 장소 이동 충돌: 현재 revision(${planting.revision})이 기대값(${validExpectedRev})과 다릅니다.`,
           planting.revision,
-          expectedRevision
+          validExpectedRev
         );
       }
 
@@ -357,10 +395,12 @@ export async function splitPlantingGroup(
   sessionGenerationId: string,
   sourcePlantingId: string,
   splitQuantity: number,
+  expectedRevision: number,
   newDisplayName?: string,
-  reason?: string,
-  expectedRevision?: number
+  reason?: string
 ): Promise<{ source: PlantingRecord; split: PlantingRecord }> {
+  const validExpectedRev = validateExpectedRevision(expectedRevision);
+
   if (
     typeof splitQuantity !== "number" ||
     !Number.isFinite(splitQuantity) ||
@@ -386,14 +426,11 @@ export async function splitPlantingGroup(
         );
       }
 
-      if (
-        expectedRevision !== undefined &&
-        source.revision !== expectedRevision
-      ) {
+      if (source.revision !== validExpectedRev) {
         throw new ConflictError(
-          `그룹 분할 충돌: 현재 revision(${source.revision})이 기대값(${expectedRevision})과 다릅니다.`,
+          `그룹 분할 충돌: 현재 revision(${source.revision})이 기대값(${validExpectedRev})과 다릅니다.`,
           source.revision,
-          expectedRevision
+          validExpectedRev
         );
       }
 
@@ -484,8 +521,10 @@ export async function changePlantingQuantity(
   plantingId: string,
   newQuantity: number,
   reason: string,
-  expectedRevision?: number
+  expectedRevision: number
 ): Promise<PlantingRecord> {
+  const validExpectedRev = validateExpectedRevision(expectedRevision);
+
   if (!reason || !reason.trim()) {
     throw new ValidationError("수량 변경 사유를 입력해 주세요.");
   }
@@ -501,14 +540,11 @@ export async function changePlantingQuantity(
         throw new NotFoundError(`식물을 찾을 수 없습니다: ${plantingId}`);
       }
 
-      if (
-        expectedRevision !== undefined &&
-        existing.revision !== expectedRevision
-      ) {
+      if (existing.revision !== validExpectedRev) {
         throw new ConflictError(
-          `수량 변경 충돌: 현재 revision(${existing.revision})이 기대값(${expectedRevision})과 다릅니다.`,
+          `수량 변경 충돌: 현재 revision(${existing.revision})이 기대값(${validExpectedRev})과 다릅니다.`,
           existing.revision,
-          expectedRevision
+          validExpectedRev
         );
       }
 
@@ -538,8 +574,10 @@ export async function trashPlanting(
   sessionEpoch: number,
   sessionGenerationId: string,
   id: string,
-  expectedRevision?: number
+  expectedRevision: number
 ): Promise<void> {
+  const validExpectedRev = validateExpectedRevision(expectedRevision);
+
   await withWriteTransaction(
     db,
     [db.plantings],
@@ -551,14 +589,11 @@ export async function trashPlanting(
         throw new NotFoundError(`식물을 찾을 수 없습니다: ${id}`);
       }
 
-      if (
-        expectedRevision !== undefined &&
-        existing.revision !== expectedRevision
-      ) {
+      if (existing.revision !== validExpectedRev) {
         throw new ConflictError(
-          `식물 휴지통 이동 충돌: 현재 revision(${existing.revision})이 기대값(${expectedRevision})과 다릅니다.`,
+          `식물 휴지통 이동 충돌: 현재 revision(${existing.revision})이 기대값(${validExpectedRev})과 다릅니다.`,
           existing.revision,
-          expectedRevision
+          validExpectedRev
         );
       }
 
@@ -577,8 +612,10 @@ export async function restorePlanting(
   sessionEpoch: number,
   sessionGenerationId: string,
   id: string,
-  expectedRevision?: number
+  expectedRevision: number
 ): Promise<void> {
+  const validExpectedRev = validateExpectedRevision(expectedRevision);
+
   await withWriteTransaction(
     db,
     [db.plantings, db.locations],
@@ -590,14 +627,11 @@ export async function restorePlanting(
         throw new NotFoundError(`식물을 찾을 수 없습니다: ${id}`);
       }
 
-      if (
-        expectedRevision !== undefined &&
-        existing.revision !== expectedRevision
-      ) {
+      if (existing.revision !== validExpectedRev) {
         throw new ConflictError(
-          `식물 복원 충돌: 현재 revision(${existing.revision})이 기대값(${expectedRevision})과 다릅니다.`,
+          `식물 복원 충돌: 현재 revision(${existing.revision})이 기대값(${validExpectedRev})과 다릅니다.`,
           existing.revision,
-          expectedRevision
+          validExpectedRev
         );
       }
 
@@ -624,8 +658,10 @@ export async function purgePlanting(
   sessionEpoch: number,
   sessionGenerationId: string,
   id: string,
-  expectedRevision?: number
+  expectedRevision: number
 ): Promise<void> {
+  const validExpectedRev = validateExpectedRevision(expectedRevision);
+
   await withWriteTransaction(
     db,
     [db.plantings, db.environmentHistory, db.cycles],
@@ -637,14 +673,11 @@ export async function purgePlanting(
         return;
       }
 
-      if (
-        expectedRevision !== undefined &&
-        existing.revision !== expectedRevision
-      ) {
+      if (existing.revision !== validExpectedRev) {
         throw new ConflictError(
-          `식물 영구 삭제 충돌: 현재 revision(${existing.revision})이 기대값(${expectedRevision})과 다릅니다.`,
+          `식물 영구 삭제 충돌: 현재 revision(${existing.revision})이 기대값(${validExpectedRev})과 다릅니다.`,
           existing.revision,
-          expectedRevision
+          validExpectedRev
         );
       }
 

@@ -8,7 +8,7 @@ import type {
 } from "./types";
 import { withWriteTransaction } from "./transaction";
 import { ConflictError, NotFoundError, ValidationError } from "./errors";
-import { validateTimeZone } from "./validators";
+import { validateExpectedRevision, validateTimeZone } from "./validators";
 
 export interface CreateLocationParams {
   label: string;
@@ -24,7 +24,7 @@ export interface UpdateLocationParams {
   rainfallExposure?: RainfallExposure;
   sunExposure?: SunExposure;
   timeZone?: string;
-  expectedRevision?: number;
+  expectedRevision: number;
 }
 
 const VALID_ENV_TYPES: readonly EnvironmentType[] = [
@@ -131,6 +131,8 @@ export async function updateLocation(
   id: string,
   updates: UpdateLocationParams
 ): Promise<LocationRecord> {
+  const expectedRevision = validateExpectedRevision(updates.expectedRevision);
+
   if (updates.label !== undefined && !updates.label.trim()) {
     throw new ValidationError("장소 이름을 비워둘 수 없습니다.");
   }
@@ -158,14 +160,11 @@ export async function updateLocation(
         throw new NotFoundError(`장소를 찾을 수 없습니다: ${id}`);
       }
 
-      if (
-        updates.expectedRevision !== undefined &&
-        existing.revision !== updates.expectedRevision
-      ) {
+      if (existing.revision !== expectedRevision) {
         throw new ConflictError(
-          `장소 수정 충돌: 현재 revision(${existing.revision})이 기대값(${updates.expectedRevision})과 다릅니다.`,
+          `장소 수정 충돌: 현재 revision(${existing.revision})이 기대값(${expectedRevision})과 다릅니다.`,
           existing.revision,
-          updates.expectedRevision
+          expectedRevision
         );
       }
 
@@ -191,8 +190,10 @@ export async function trashLocation(
   sessionEpoch: number,
   sessionGenerationId: string,
   id: string,
-  expectedRevision?: number
+  expectedRevision: number
 ): Promise<void> {
+  const validExpectedRev = validateExpectedRevision(expectedRevision);
+
   await withWriteTransaction(
     db,
     [db.locations, db.plantings],
@@ -204,14 +205,11 @@ export async function trashLocation(
         throw new NotFoundError(`장소를 찾을 수 없습니다: ${id}`);
       }
 
-      if (
-        expectedRevision !== undefined &&
-        existing.revision !== expectedRevision
-      ) {
+      if (existing.revision !== validExpectedRev) {
         throw new ConflictError(
-          `장소 휴지통 이동 충돌: 현재 revision(${existing.revision})이 기대값(${expectedRevision})과 다릅니다.`,
+          `장소 휴지통 이동 충돌: 현재 revision(${existing.revision})이 기대값(${validExpectedRev})과 다릅니다.`,
           existing.revision,
-          expectedRevision
+          validExpectedRev
         );
       }
 
@@ -243,8 +241,10 @@ export async function restoreLocation(
   sessionEpoch: number,
   sessionGenerationId: string,
   id: string,
-  expectedRevision?: number
+  expectedRevision: number
 ): Promise<void> {
+  const validExpectedRev = validateExpectedRevision(expectedRevision);
+
   await withWriteTransaction(
     db,
     [db.locations],
@@ -256,14 +256,11 @@ export async function restoreLocation(
         throw new NotFoundError(`장소를 찾을 수 없습니다: ${id}`);
       }
 
-      if (
-        expectedRevision !== undefined &&
-        existing.revision !== expectedRevision
-      ) {
+      if (existing.revision !== validExpectedRev) {
         throw new ConflictError(
-          `장소 복원 충돌: 현재 revision(${existing.revision})이 기대값(${expectedRevision})과 다릅니다.`,
+          `장소 복원 충돌: 현재 revision(${existing.revision})이 기대값(${validExpectedRev})과 다릅니다.`,
           existing.revision,
-          expectedRevision
+          validExpectedRev
         );
       }
 
@@ -282,8 +279,10 @@ export async function purgeLocation(
   sessionEpoch: number,
   sessionGenerationId: string,
   id: string,
-  expectedRevision?: number
+  expectedRevision: number
 ): Promise<void> {
+  const validExpectedRev = validateExpectedRevision(expectedRevision);
+
   await withWriteTransaction(
     db,
     [db.locations, db.plantings],
@@ -295,14 +294,11 @@ export async function purgeLocation(
         return; // Idempotent
       }
 
-      if (
-        expectedRevision !== undefined &&
-        existing.revision !== expectedRevision
-      ) {
+      if (existing.revision !== validExpectedRev) {
         throw new ConflictError(
-          `장소 영구 삭제 충돌: 현재 revision(${existing.revision})이 기대값(${expectedRevision})과 다릅니다.`,
+          `장소 영구 삭제 충돌: 현재 revision(${existing.revision})이 기대값(${validExpectedRev})과 다릅니다.`,
           existing.revision,
-          expectedRevision
+          validExpectedRev
         );
       }
 

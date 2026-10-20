@@ -3,7 +3,12 @@ import type { SikmulwangDB } from "./database";
 import type { CycleRecord } from "./types";
 import { withWriteTransaction } from "./transaction";
 import { ConflictError, NotFoundError, ValidationError } from "./errors";
-import { validateDateRange, validateLocalDate, validateTimeZone } from "./validators";
+import {
+  validateDateRange,
+  validateExpectedRevision,
+  validateLocalDate,
+  validateTimeZone,
+} from "./validators";
 
 export interface StartCycleParams {
   plantingId: string;
@@ -14,7 +19,7 @@ export interface StartCycleParams {
 export interface EndCycleParams {
   cycleId: string;
   endLocalDate: string;
-  expectedRevision?: number;
+  expectedRevision: number;
 }
 
 export async function listCyclesByPlanting(
@@ -127,6 +132,7 @@ export async function endCycle(
   sessionGenerationId: string,
   params: EndCycleParams
 ): Promise<CycleRecord> {
+  const expectedRevision = validateExpectedRevision(params.expectedRevision);
   validateLocalDate(params.endLocalDate, "시즌 종료 날짜");
 
   return await withWriteTransaction(
@@ -143,14 +149,11 @@ export async function endCycle(
         throw new ValidationError("이미 종료된 시즌입니다.");
       }
 
-      if (
-        params.expectedRevision !== undefined &&
-        existing.revision !== params.expectedRevision
-      ) {
+      if (existing.revision !== expectedRevision) {
         throw new ConflictError(
-          `시즌 종료 충돌: 현재 revision(${existing.revision})이 기대값(${params.expectedRevision})과 다릅니다.`,
+          `시즌 종료 충돌: 현재 revision(${existing.revision})이 기대값(${expectedRevision})과 다릅니다.`,
           existing.revision,
-          params.expectedRevision
+          expectedRevision
         );
       }
 

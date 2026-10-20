@@ -86,13 +86,14 @@ describe("P1 Local Data Foundation — IndexedDB & Repositories", () => {
       const updated = await updateLocation(db, epoch, generationId, newLoc.id, {
         label: "서재 남향 창가",
         sunExposure: "FULL_SUN",
+        expectedRevision: newLoc.revision,
       });
       expect(updated.label).toBe("서재 남향 창가");
       expect(updated.sunExposure).toBe("FULL_SUN");
       expect(updated.revision).toBe(2);
 
       //+_+// Trash location
-      await trashLocation(db, epoch, generationId, newLoc.id);
+      await trashLocation(db, epoch, generationId, newLoc.id, updated.revision);
       const activeLocs = await listLocations(db, generationId, {
         includeTrashed: false,
       });
@@ -104,12 +105,12 @@ describe("P1 Local Data Foundation — IndexedDB & Repositories", () => {
       expect(allLocs.some((l) => l.id === newLoc.id)).toBe(true);
 
       //+_+// Restore location
-      await restoreLocation(db, epoch, generationId, newLoc.id);
+      await restoreLocation(db, epoch, generationId, newLoc.id, 3);
       const restoredLocs = await listLocations(db, generationId);
       expect(restoredLocs.some((l) => l.id === newLoc.id)).toBe(true);
 
       //+_+// Purge location
-      await purgeLocation(db, epoch, generationId, newLoc.id);
+      await purgeLocation(db, epoch, generationId, newLoc.id, 4);
       const afterPurge = await listLocations(db, generationId, {
         includeTrashed: true,
       });
@@ -181,7 +182,8 @@ describe("P1 Local Data Foundation — IndexedDB & Repositories", () => {
         generationId,
         planting.id,
         loc2.id,
-        moveTime
+        moveTime,
+        planting.revision
       );
 
       expect(movedPlanting.locationId).toBe(loc2.id);
@@ -227,6 +229,7 @@ describe("P1 Local Data Foundation — IndexedDB & Repositories", () => {
         generationId,
         groupPlanting.id,
         2,
+        groupPlanting.revision,
         "방울토마토 2호",
         "지인 분양 준비"
       );
@@ -271,6 +274,7 @@ describe("P1 Local Data Foundation — IndexedDB & Repositories", () => {
           generationId,
           singlePlant.id,
           1,
+          singlePlant.revision,
           "분할 화분"
         )
       ).rejects.toThrow(ValidationError);
@@ -292,7 +296,8 @@ describe("P1 Local Data Foundation — IndexedDB & Repositories", () => {
         generationId,
         planting.id,
         3,
-        "1개 분갈이 중 손상으로 폐기"
+        "1개 분갈이 중 손상으로 폐기",
+        planting.revision
       );
 
       expect(updated.quantity).toBe(3);
@@ -300,7 +305,7 @@ describe("P1 Local Data Foundation — IndexedDB & Repositories", () => {
 
       //+_+// Empty reason rejected
       await expect(
-        changePlantingQuantity(db, epoch, generationId, planting.id, 2, "   ")
+        changePlantingQuantity(db, epoch, generationId, planting.id, 2, "   ", updated.revision)
       ).rejects.toThrow(ValidationError);
     });
 
@@ -313,7 +318,7 @@ describe("P1 Local Data Foundation — IndexedDB & Repositories", () => {
         locationId: locations[0].id,
       });
 
-      await trashPlanting(db, epoch, generationId, planting.id);
+      await trashPlanting(db, epoch, generationId, planting.id, planting.revision);
       const activeList = await listPlantings(db, generationId, {
         includeTrashed: false,
       });
@@ -325,11 +330,11 @@ describe("P1 Local Data Foundation — IndexedDB & Repositories", () => {
       const trashed = allList.find((p) => p.id === planting.id);
       expect(trashed?.recordStatus).toBe("TRASHED");
 
-      await restorePlanting(db, epoch, generationId, planting.id);
+      await restorePlanting(db, epoch, generationId, planting.id, 2);
       const restored = await getPlantingById(db, generationId, planting.id);
       expect(restored?.recordStatus).toBe("ACTIVE");
 
-      await purgePlanting(db, epoch, generationId, planting.id);
+      await purgePlanting(db, epoch, generationId, planting.id, 3);
       const purged = await getPlantingById(db, generationId, planting.id);
       expect(purged).toBeUndefined();
     });
@@ -362,6 +367,7 @@ describe("P1 Local Data Foundation — IndexedDB & Repositories", () => {
       const ended = await endCycle(db, epoch, generationId, {
         cycleId: activeCycle1!.id,
         endLocalDate: "2026-08-31",
+        expectedRevision: activeCycle1!.revision,
       });
       expect(ended.status).toBe("ENDED");
       expect(ended.endLocalDate).toBe("2026-08-31");

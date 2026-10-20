@@ -1,5 +1,5 @@
 //+_+// Profile and Generation repository with meta controls
-import type { SikmulwangDB } from "./database";
+import { verifyAndGetSystemMeta, type SikmulwangDB } from "./database";
 import type {
   GenerationRecord,
   GenerationState,
@@ -18,14 +18,7 @@ export interface SystemMetaState {
 export async function getSystemMeta(db: SikmulwangDB): Promise<SystemMetaState> {
   const entries = await db.meta.toArray();
   const map = new Map(entries.map((e) => [e.key, e.value]));
-
-  return {
-    activeProfileId: String(map.get("activeProfileId") ?? "p_default"),
-    activeGenerationId: String(map.get("activeGenerationId") ?? "g_default"),
-    epoch: Number(map.get("epoch") ?? 1),
-    writeFence: Boolean(map.get("writeFence") ?? false),
-    schemaVersion: Number(map.get("schemaVersion") ?? 1),
-  };
+  return await verifyAndGetSystemMeta(map, db);
 }
 
 export async function getActiveProfile(

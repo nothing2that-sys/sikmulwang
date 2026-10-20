@@ -4,17 +4,24 @@ import "fake-indexeddb/auto";
 import { SikmulwangDB, initializeDatabase, setDbInstance } from "../../lib/db/database";
 import {
   createPlanting,
+  updatePlanting,
   changePlantingQuantity,
   movePlantingLocation,
+  splitPlantingGroup,
+  trashPlanting,
+  restorePlanting,
+  purgePlanting,
 } from "../../lib/db/plantingRepository";
 import {
   createLocation,
+  updateLocation,
   purgeLocation,
   trashLocation,
 } from "../../lib/db/locationRepository";
 import { startCycle, endCycle } from "../../lib/db/cycleRepository";
-import { setWriteFence } from "../../lib/db/profileRepository";
-import { ConflictError } from "../../lib/db/errors";
+import { setWriteFence, getSystemMeta } from "../../lib/db/profileRepository";
+import { ConflictError, CorruptedMetadataError, NotFoundError, ValidationError } from "../../lib/db/errors";
+import { withWriteTransaction } from "../../lib/db/transaction";
 
 describe("P1 Data Integrity Defect Reproduction Tests", () => {
   let db: SikmulwangDB;
@@ -86,12 +93,12 @@ describe("P1 Data Integrity Defect Reproduction Tests", () => {
 
     //+_+// Attempting to purge this location MUST fail because a plant is referencing it
     await expect(
-      purgeLocation(db, meta.epoch, meta.activeGenerationId, loc.id)
+      purgeLocation(db, meta.epoch, meta.activeGenerationId, loc.id, loc.revision)
     ).rejects.toThrow();
 
     //+_+// Attempting to trash this location MUST fail because active plants are referencing it
     await expect(
-      trashLocation(db, meta.epoch, meta.activeGenerationId, loc.id)
+      trashLocation(db, meta.epoch, meta.activeGenerationId, loc.id, loc.revision)
     ).rejects.toThrow();
   });
 
@@ -116,6 +123,7 @@ describe("P1 Data Integrity Defect Reproduction Tests", () => {
       endCycle(db, meta.epoch, meta.activeGenerationId, {
         cycleId: cycle.id,
         endLocalDate: "2000-01-01",
+        expectedRevision: cycle.revision,
       })
     ).rejects.toThrow();
   });
@@ -170,7 +178,8 @@ describe("P1 Data Integrity Defect Reproduction Tests", () => {
         meta.activeGenerationId,
         planting.id,
         "loc_balcony",
-        "2000-01-01T00:00:00.000Z"
+        "2000-01-01T00:00:00.000Z",
+        planting.revision
       )
     ).rejects.toThrow();
   });
@@ -238,5 +247,341 @@ describe("P1 Data Integrity Defect Reproduction Tests", () => {
     const fresh = await db.plantings.get([meta.activeGenerationId, planting.id]);
     expect(fresh?.quantity).toBe(4);
     expect(fresh?.revision).toBe(2);
+  });
+
+  //+_+// R2: 낙관적 동시성 제어 및 expectedRevision 필수 검증
+  describe("R2: Strict Expected Revision Validation", () => {
+    it("rejects undefined, null, NaN, <= 0, and non-integer revision values with ValidationError", async () => {
+      const meta = await initializeDatabase(db);
+      const { planting } = await createPlanting(db, meta.epoch, meta.activeGenerationId, {
+        displayName: "R2 검증 식물",
+        groupType: "INDIVIDUAL",
+        quantity: 1,
+        locationId: "loc_indoor_living",
+      });
+
+      // undefined
+      await expect(
+        // @ts-expect-error testing runtime validation
+        updatePlanting(db, meta.epoch, meta.activeGenerationId, planting.id, { displayName: "이름" })
+      ).rejects.toThrow(ValidationError);
+
+      // NaN
+      await expect(
+        updatePlanting(db, meta.epoch, meta.activeGenerationId, planting.id, { displayName: "이름", expectedRevision: NaN })
+      ).rejects.toThrow(ValidationError);
+
+      // <= 0
+      await expect(
+        updatePlanting(db, meta.epoch, meta.activeGenerationId, planting.id, { displayName: "이름", expectedRevision: 0 })
+      ).rejects.toThrow(ValidationError);
+
+      // string
+      await expect(
+        // @ts-expect-error testing runtime validation
+        updatePlanting(db, meta.epoch, meta.activeGenerationId, planting.id, { displayName: "이름", expectedRevision: "1" })
+      ).rejects.toThrow(ValidationError);
+
+      // movePlantingLocation with invalid revision
+      await expect(
+        // @ts-expect-error testing runtime validation
+        movePlantingLocation(db, meta.epoch, meta.activeGenerationId, planting.id, "loc_balcony", undefined, undefined)
+      ).rejects.toThrow(ValidationError);
+
+      // splitPlantingGroup with invalid revision
+      await expect(
+        splitPlantingGroup(db, meta.epoch, meta.activeGenerationId, planting.id, 1, NaN)
+      ).rejects.toThrow(ValidationError);
+
+      // changePlantingQuantity with invalid revision
+      await expect(
+        // @ts-expect-error testing runtime validation
+        changePlantingQuantity(db, meta.epoch, meta.activeGenerationId, planting.id, 1, "사유", null)
+      ).rejects.toThrow(ValidationError);
+
+      // trashPlanting with invalid revision
+      await expect(
+        trashPlanting(db, meta.epoch, meta.activeGenerationId, planting.id, -1)
+      ).rejects.toThrow(ValidationError);
+
+      // restorePlanting with invalid revision
+      await expect(
+        // @ts-expect-error testing runtime validation
+        restorePlanting(db, meta.epoch, meta.activeGenerationId, planting.id, undefined)
+      ).rejects.toThrow(ValidationError);
+
+      // purgePlanting with invalid revision
+      await expect(
+        purgePlanting(db, meta.epoch, meta.activeGenerationId, planting.id, 0)
+      ).rejects.toThrow(ValidationError);
+
+      // updateLocation with invalid revision
+      await expect(
+        // @ts-expect-error testing runtime validation
+        updateLocation(db, meta.epoch, meta.activeGenerationId, "loc_indoor_living", { label: "새이름" })
+      ).rejects.toThrow(ValidationError);
+
+      // endCycle with invalid revision
+      const cycle = await startCycle(db, meta.epoch, meta.activeGenerationId, {
+        plantingId: planting.id,
+        startLocalDate: "2026-10-19",
+      });
+      await expect(
+        // @ts-expect-error testing runtime validation
+        endCycle(db, meta.epoch, meta.activeGenerationId, { cycleId: cycle.id, endLocalDate: "2026-10-20" })
+      ).rejects.toThrow(ValidationError);
+
+      // Verify zero partial updates
+      const checkPlant = await db.plantings.get([meta.activeGenerationId, planting.id]);
+      expect(checkPlant?.displayName).toBe("R2 검증 식물");
+      expect(checkPlant?.revision).toBe(1);
+    });
+
+    it("accepts valid positive integer revision matching existing record", async () => {
+      const meta = await initializeDatabase(db);
+      const { planting } = await createPlanting(db, meta.epoch, meta.activeGenerationId, {
+        displayName: "R2 정상 수정 식물",
+        groupType: "INDIVIDUAL",
+        quantity: 1,
+        locationId: "loc_indoor_living",
+      });
+
+      const updated = await updatePlanting(db, meta.epoch, meta.activeGenerationId, planting.id, {
+        displayName: "R2 정상 수정 완료",
+        expectedRevision: 1,
+      });
+
+      expect(updated.displayName).toBe("R2 정상 수정 완료");
+      expect(updated.revision).toBe(2);
+    });
+  });
+
+  //+_+// R3: 엄격한 타임스탬프 파싱 및 환경 이력 단조 증가 검증
+  describe("R3: Strict UTC ISO8601 Timestamp Validation", () => {
+    it("rejects invalid, empty, or non-UTC timestamps", async () => {
+      const meta = await initializeDatabase(db);
+      const { planting } = await createPlanting(db, meta.epoch, meta.activeGenerationId, {
+        displayName: "R3 타임스탬프 테스트",
+        groupType: "INDIVIDUAL",
+        quantity: 1,
+        locationId: "loc_indoor_living",
+      });
+
+      // not-a-timestamp
+      await expect(
+        movePlantingLocation(db, meta.epoch, meta.activeGenerationId, planting.id, "loc_balcony", "not-a-timestamp", 1)
+      ).rejects.toThrow(ValidationError);
+
+      // empty string
+      await expect(
+        movePlantingLocation(db, meta.epoch, meta.activeGenerationId, planting.id, "loc_balcony", "   ", 1)
+      ).rejects.toThrow(ValidationError);
+
+      // calendar-impossible timestamp: 2026-02-30T10:00:00Z
+      await expect(
+        movePlantingLocation(db, meta.epoch, meta.activeGenerationId, planting.id, "loc_balcony", "2026-02-30T10:00:00Z", 1)
+      ).rejects.toThrow(ValidationError);
+
+      // timezone-less ISO string
+      await expect(
+        movePlantingLocation(db, meta.epoch, meta.activeGenerationId, planting.id, "loc_balcony", "2026-10-19T10:00:00", 1)
+      ).rejects.toThrow(ValidationError);
+    });
+
+    it("accepts valid UTC ISO8601 string and defaults correctly when omitted", async () => {
+      const meta = await initializeDatabase(db);
+      const { planting } = await createPlanting(db, meta.epoch, meta.activeGenerationId, {
+        displayName: "R3 정상 타임스탬프",
+        groupType: "INDIVIDUAL",
+        quantity: 1,
+        locationId: "loc_indoor_living",
+      });
+
+      // Default (undefined effectiveAt)
+      const moved1 = await movePlantingLocation(
+        db,
+        meta.epoch,
+        meta.activeGenerationId,
+        planting.id,
+        "loc_balcony",
+        undefined,
+        1
+      );
+      expect(moved1.locationId).toBe("loc_balcony");
+      expect(moved1.revision).toBe(2);
+
+      // Explicit valid future timestamp
+      const validFuture = new Date(Date.now() + 60000).toISOString();
+      const moved2 = await movePlantingLocation(
+        db,
+        meta.epoch,
+        meta.activeGenerationId,
+        planting.id,
+        "loc_indoor_living",
+        validFuture,
+        2
+      );
+      expect(moved2.locationId).toBe("loc_indoor_living");
+      expect(moved2.revision).toBe(3);
+    });
+  });
+
+  //+_+// R4: Taxon Snapshot 외래키 세대 격리 검증
+  describe("R4: Taxon Snapshot Generation Scoping", () => {
+    it("allows null taxonSnapshotId", async () => {
+      const meta = await initializeDatabase(db);
+      const { planting } = await createPlanting(db, meta.epoch, meta.activeGenerationId, {
+        displayName: "분류 없는 식물",
+        groupType: "INDIVIDUAL",
+        quantity: 1,
+        locationId: "loc_indoor_living",
+        taxonSnapshotId: null,
+      });
+      expect(planting.taxonSnapshotId).toBeNull();
+    });
+
+    it("allows referencing taxonSnapshot in the same active generation", async () => {
+      const meta = await initializeDatabase(db);
+      const taxonId = "txn_same_gen_1";
+      await db.taxonSnapshots.put({
+        generationId: meta.activeGenerationId,
+        id: taxonId,
+        canonicalName: "Monstera deliciosa",
+        taxonRank: "SPECIES",
+        sourceKind: "MANUAL",
+        sourceVersion: "1.0",
+        sourceUrl: null,
+      });
+
+      const { planting } = await createPlanting(db, meta.epoch, meta.activeGenerationId, {
+        displayName: "몬스테라",
+        groupType: "INDIVIDUAL",
+        quantity: 1,
+        locationId: "loc_indoor_living",
+        taxonSnapshotId: taxonId,
+      });
+      expect(planting.taxonSnapshotId).toBe(taxonId);
+    });
+
+    it("rejects non-existent taxonSnapshotId", async () => {
+      const meta = await initializeDatabase(db);
+      await expect(
+        createPlanting(db, meta.epoch, meta.activeGenerationId, {
+          displayName: "유령 분류 식물",
+          groupType: "INDIVIDUAL",
+          quantity: 1,
+          locationId: "loc_indoor_living",
+          taxonSnapshotId: "txn_non_existent",
+        })
+      ).rejects.toThrow(NotFoundError);
+    });
+
+    it("rejects taxonSnapshotId belonging to a different generation", async () => {
+      const meta = await initializeDatabase(db);
+      const otherGenId = "gen_other_generation_999";
+      const taxonId = "txn_other_gen_1";
+
+      await db.taxonSnapshots.put({
+        generationId: otherGenId,
+        id: taxonId,
+        canonicalName: "Ocimum basilicum",
+        taxonRank: "SPECIES",
+        sourceKind: "MANUAL",
+        sourceVersion: "1.0",
+        sourceUrl: null,
+      });
+
+      // Attempt to reference taxon snapshot from other generation
+      await expect(
+        createPlanting(db, meta.epoch, meta.activeGenerationId, {
+          displayName: "타 세대 참조 바질",
+          groupType: "INDIVIDUAL",
+          quantity: 1,
+          locationId: "loc_indoor_living",
+          taxonSnapshotId: taxonId,
+        })
+      ).rejects.toThrow(NotFoundError);
+    });
+
+    it("rejects update to an invalid taxonSnapshotId", async () => {
+      const meta = await initializeDatabase(db);
+      const { planting } = await createPlanting(db, meta.epoch, meta.activeGenerationId, {
+        displayName: "수정 테스트 식물",
+        groupType: "INDIVIDUAL",
+        quantity: 1,
+        locationId: "loc_indoor_living",
+      });
+
+      await expect(
+        updatePlanting(db, meta.epoch, meta.activeGenerationId, planting.id, {
+          taxonSnapshotId: "txn_fake_id_123",
+          expectedRevision: 1,
+        })
+      ).rejects.toThrow(NotFoundError);
+    });
+  });
+
+  //+_+// R5: 시스템 메타데이터 무결성 검증 및 손상 시 쓰기 차단
+  describe("R5: System Metadata Integrity and Corruption Protection", () => {
+    it("successfully verifies clean init and normal reopen", async () => {
+      const meta = await initializeDatabase(db);
+      expect(meta.writeFence).toBe(false);
+      expect(meta.epoch).toBe(1);
+      expect(meta.activeGenerationId).toBeTruthy();
+
+      const reopened = await getSystemMeta(db);
+      expect(reopened.epoch).toBe(1);
+      expect(reopened.activeGenerationId).toBe(meta.activeGenerationId);
+    });
+
+    it("throws CorruptedMetadataError when writeFence is missing", async () => {
+      await initializeDatabase(db);
+      await db.meta.delete("writeFence");
+
+      await expect(initializeDatabase(db)).rejects.toThrow(CorruptedMetadataError);
+      await expect(getSystemMeta(db)).rejects.toThrow(CorruptedMetadataError);
+    });
+
+    it("throws CorruptedMetadataError when epoch is missing or invalid", async () => {
+      await initializeDatabase(db);
+      await db.meta.put({ key: "epoch", value: 0, updatedAt: new Date().toISOString() });
+
+      await expect(initializeDatabase(db)).rejects.toThrow(CorruptedMetadataError);
+
+      await db.meta.put({ key: "epoch", value: -5, updatedAt: new Date().toISOString() });
+      await expect(initializeDatabase(db)).rejects.toThrow(CorruptedMetadataError);
+    });
+
+    it("throws CorruptedMetadataError when schemaVersion is unsupported", async () => {
+      await initializeDatabase(db);
+      await db.meta.put({ key: "schemaVersion", value: 99, updatedAt: new Date().toISOString() });
+
+      await expect(initializeDatabase(db)).rejects.toThrow(CorruptedMetadataError);
+    });
+
+    it("throws CorruptedMetadataError when active generation pointer is broken", async () => {
+      await initializeDatabase(db);
+      await db.meta.put({ key: "activeGenerationId", value: "gen_missing_pointer", updatedAt: new Date().toISOString() });
+
+      await expect(initializeDatabase(db)).rejects.toThrow(CorruptedMetadataError);
+    });
+
+    it("blocks withWriteTransaction when metadata is corrupted", async () => {
+      const meta = await initializeDatabase(db);
+      // Corrupt the epoch in meta table
+      await db.meta.put({ key: "epoch", value: -1, updatedAt: new Date().toISOString() });
+
+      await expect(
+        withWriteTransaction(
+          db,
+          [db.plantings],
+          meta.epoch,
+          meta.activeGenerationId,
+          async ({ generationId }) => {
+            await db.plantings.delete([generationId, "any_id"]);
+          }
+        )
+      ).rejects.toThrow(CorruptedMetadataError);
+    });
   });
 });

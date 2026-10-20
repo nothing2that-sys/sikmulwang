@@ -67,12 +67,12 @@ export interface DbContextValue {
   addLocation: (params: CreateLocationParams) => Promise<LocationRecord>;
   editLocation: (
     id: string,
-    params: UpdateLocationParams,
-    expectedRevision?: number
+    params: Omit<UpdateLocationParams, "expectedRevision">,
+    expectedRevision: number
   ) => Promise<LocationRecord>;
-  removeLocation: (id: string, expectedRevision?: number) => Promise<void>;
-  restoreLocationItem: (id: string, expectedRevision?: number) => Promise<void>;
-  purgeLocationItem: (id: string, expectedRevision?: number) => Promise<void>;
+  removeLocation: (id: string, expectedRevision: number) => Promise<void>;
+  restoreLocationItem: (id: string, expectedRevision: number) => Promise<void>;
+  purgeLocationItem: (id: string, expectedRevision: number) => Promise<void>;
 
   //+_+// Planting actions
   addPlanting: (
@@ -80,38 +80,38 @@ export interface DbContextValue {
   ) => Promise<{ planting: PlantingRecord; cycle?: CycleRecord }>;
   editPlanting: (
     id: string,
-    params: UpdatePlantingParams,
-    expectedRevision?: number
+    params: Omit<UpdatePlantingParams, "expectedRevision">,
+    expectedRevision: number
   ) => Promise<PlantingRecord>;
   movePlanting: (
     id: string,
     newLocationId: string,
-    effectiveAt?: string,
-    expectedRevision?: number
+    effectiveAt: string | undefined,
+    expectedRevision: number
   ) => Promise<PlantingRecord>;
   splitPlanting: (
     id: string,
     splitQuantity: number,
+    expectedRevision: number,
     newDisplayName?: string,
-    reason?: string,
-    expectedRevision?: number
+    reason?: string
   ) => Promise<{ source: PlantingRecord; split: PlantingRecord }>;
   changeQuantity: (
     id: string,
     newQuantity: number,
     reason: string,
-    expectedRevision?: number
+    expectedRevision: number
   ) => Promise<PlantingRecord>;
-  removePlanting: (id: string, expectedRevision?: number) => Promise<void>;
-  restorePlantingItem: (id: string, expectedRevision?: number) => Promise<void>;
-  purgePlantingItem: (id: string, expectedRevision?: number) => Promise<void>;
+  removePlanting: (id: string, expectedRevision: number) => Promise<void>;
+  restorePlantingItem: (id: string, expectedRevision: number) => Promise<void>;
+  purgePlantingItem: (id: string, expectedRevision: number) => Promise<void>;
 
   //+_+// Cycle actions
   startNewCycle: (plantingId: string, startLocalDate: string) => Promise<CycleRecord>;
   finishCycle: (
     cycleId: string,
     endLocalDate: string,
-    expectedRevision?: number
+    expectedRevision: number
   ) => Promise<CycleRecord>;
   getActiveCycleForPlanting: (plantingId: string) => Promise<CycleRecord | undefined>;
   getCyclesForPlanting: (plantingId: string) => Promise<CycleRecord[]>;
@@ -223,8 +223,8 @@ export function DbProvider({ children }: { children: ReactNode }) {
   const editLocation = useCallback(
     async (
       id: string,
-      params: UpdateLocationParams,
-      expectedRevision?: number
+      params: Omit<UpdateLocationParams, "expectedRevision">,
+      expectedRevision: number
     ) => {
       if (!meta) throw new Error("데이터베이스가 초기화되지 않았습니다.");
       const res = await updateLocation(
@@ -241,7 +241,7 @@ export function DbProvider({ children }: { children: ReactNode }) {
   );
 
   const removeLocation = useCallback(
-    async (id: string, expectedRevision?: number) => {
+    async (id: string, expectedRevision: number) => {
       if (!meta) throw new Error("데이터베이스가 초기화되지 않았습니다.");
       await trashLocation(
         db,
@@ -256,7 +256,7 @@ export function DbProvider({ children }: { children: ReactNode }) {
   );
 
   const restoreLocationItem = useCallback(
-    async (id: string, expectedRevision?: number) => {
+    async (id: string, expectedRevision: number) => {
       if (!meta) throw new Error("데이터베이스가 초기화되지 않았습니다.");
       await restoreLocation(
         db,
@@ -271,7 +271,7 @@ export function DbProvider({ children }: { children: ReactNode }) {
   );
 
   const purgeLocationItem = useCallback(
-    async (id: string, expectedRevision?: number) => {
+    async (id: string, expectedRevision: number) => {
       if (!meta) throw new Error("데이터베이스가 초기화되지 않았습니다.");
       await purgeLocation(
         db,
@@ -303,8 +303,8 @@ export function DbProvider({ children }: { children: ReactNode }) {
   const editPlanting = useCallback(
     async (
       id: string,
-      params: UpdatePlantingParams,
-      expectedRevision?: number
+      params: Omit<UpdatePlantingParams, "expectedRevision">,
+      expectedRevision: number
     ) => {
       if (!meta) throw new Error("데이터베이스가 초기화되지 않았습니다.");
       const res = await updatePlanting(
@@ -324,8 +324,8 @@ export function DbProvider({ children }: { children: ReactNode }) {
     async (
       id: string,
       newLocationId: string,
-      effectiveAt?: string,
-      expectedRevision?: number
+      effectiveAt: string | undefined,
+      expectedRevision: number
     ) => {
       if (!meta) throw new Error("데이터베이스가 초기화되지 않았습니다.");
       const res = await movePlantingLocation(
@@ -347,9 +347,9 @@ export function DbProvider({ children }: { children: ReactNode }) {
     async (
       id: string,
       splitQuantity: number,
+      expectedRevision: number,
       newDisplayName?: string,
-      reason?: string,
-      expectedRevision?: number
+      reason?: string
     ) => {
       if (!meta) throw new Error("데이터베이스가 초기화되지 않았습니다.");
       const res = await splitPlantingGroup(
@@ -358,9 +358,9 @@ export function DbProvider({ children }: { children: ReactNode }) {
         meta.activeGenerationId,
         id,
         splitQuantity,
+        expectedRevision,
         newDisplayName,
-        reason,
-        expectedRevision
+        reason
       );
       await loadData();
       return res;
@@ -373,7 +373,7 @@ export function DbProvider({ children }: { children: ReactNode }) {
       id: string,
       newQuantity: number,
       reason: string,
-      expectedRevision?: number
+      expectedRevision: number
     ) => {
       if (!meta) throw new Error("데이터베이스가 초기화되지 않았습니다.");
       const res = await changePlantingQuantity(
@@ -392,7 +392,7 @@ export function DbProvider({ children }: { children: ReactNode }) {
   );
 
   const removePlanting = useCallback(
-    async (id: string, expectedRevision?: number) => {
+    async (id: string, expectedRevision: number) => {
       if (!meta) throw new Error("데이터베이스가 초기화되지 않았습니다.");
       await trashPlanting(
         db,
@@ -407,7 +407,7 @@ export function DbProvider({ children }: { children: ReactNode }) {
   );
 
   const restorePlantingItem = useCallback(
-    async (id: string, expectedRevision?: number) => {
+    async (id: string, expectedRevision: number) => {
       if (!meta) throw new Error("데이터베이스가 초기화되지 않았습니다.");
       await restorePlanting(
         db,
@@ -422,7 +422,7 @@ export function DbProvider({ children }: { children: ReactNode }) {
   );
 
   const purgePlantingItem = useCallback(
-    async (id: string, expectedRevision?: number) => {
+    async (id: string, expectedRevision: number) => {
       if (!meta) throw new Error("데이터베이스가 초기화되지 않았습니다.");
       await purgePlanting(
         db,
@@ -458,7 +458,7 @@ export function DbProvider({ children }: { children: ReactNode }) {
     async (
       cycleId: string,
       endLocalDate: string,
-      expectedRevision?: number
+      expectedRevision: number
     ) => {
       if (!meta) throw new Error("데이터베이스가 초기화되지 않았습니다.");
       const res = await endCycleAction(

@@ -1,5 +1,6 @@
 //+_+// Dexie database definition conforming to docs/12_DATA_CONTRACT_V1.md
 import Dexie, { type Table } from "dexie";
+import { CorruptedMetadataError } from "./errors";
 import type {
   MetaEntry,
   ProfileRecord,
@@ -102,12 +103,102 @@ export function setDbInstance(db: SikmulwangDB | null): void {
   defaultDbInstance = db;
 }
 
+export const SUPPORTED_SCHEMA_VERSION = 1;
+
 export interface InitializedMeta {
   activeProfileId: string;
   activeGenerationId: string;
   epoch: number;
   writeFence: boolean;
   schemaVersion: number;
+}
+
+//+_+// Verifies safety metadata consistency and pointer reference integrity
+export async function verifyAndGetSystemMeta(
+  metaMap: Map<string, unknown>,
+  db: SikmulwangDB
+): Promise<InitializedMeta> {
+  const missingKeys = [
+    "activeProfileId",
+    "activeGenerationId",
+    "epoch",
+    "writeFence",
+    "schemaVersion",
+  ].filter((k) => !metaMap.has(k));
+
+  if (missingKeys.length > 0) {
+    throw new CorruptedMetadataError(
+      `데이터베이스 안전 메타데이터가 손상되었습니다. 누락된 키: ${missingKeys.join(", ")}`
+    );
+  }
+
+  const activeProfileId = metaMap.get("activeProfileId");
+  const activeGenerationId = metaMap.get("activeGenerationId");
+  const epoch = metaMap.get("epoch");
+  const writeFence = metaMap.get("writeFence");
+  const schemaVersion = metaMap.get("schemaVersion");
+
+  if (typeof activeProfileId !== "string" || !activeProfileId.trim()) {
+    throw new CorruptedMetadataError("유효하지 않은 activeProfileId 메타데이터입니다.");
+  }
+  if (typeof activeGenerationId !== "string" || !activeGenerationId.trim()) {
+    throw new CorruptedMetadataError("유효하지 않은 activeGenerationId 메타데이터입니다.");
+  }
+  if (
+    typeof epoch !== "number" ||
+    !Number.isFinite(epoch) ||
+    !Number.isInteger(epoch) ||
+    epoch < 1
+  ) {
+    throw new CorruptedMetadataError(
+      `유효하지 않은 epoch 메타데이터입니다: ${String(epoch)}`
+    );
+  }
+  if (typeof writeFence !== "boolean") {
+    throw new CorruptedMetadataError(
+      `writeFence는 반드시 boolean이어야 합니다. 입력값: ${String(writeFence)}`
+    );
+  }
+  if (schemaVersion !== SUPPORTED_SCHEMA_VERSION) {
+    throw new CorruptedMetadataError(
+      `지원하지 않는 스키마 버전입니다: ${String(schemaVersion)} (지원 버전: ${SUPPORTED_SCHEMA_VERSION})`
+    );
+  }
+
+  //+_+// Cross-reference active pointers with registered entities
+  const profile = await db.profiles.get(activeProfileId);
+  if (!profile) {
+    throw new CorruptedMetadataError(
+      `활성 프로필 레코드가 존재하지 않습니다: ${activeProfileId}`
+    );
+  }
+
+  const generation = await db.generationRegistry.get(activeGenerationId);
+  if (!generation) {
+    throw new CorruptedMetadataError(
+      `활성 세대 레코드가 존재하지 않습니다: ${activeGenerationId}`
+    );
+  }
+
+  if (generation.profileId !== activeProfileId) {
+    throw new CorruptedMetadataError(
+      `활성 세대의 profileId(${generation.profileId})가 activeProfileId(${activeProfileId})와 일치하지 않습니다.`
+    );
+  }
+
+  if (generation.state !== "ACTIVE") {
+    throw new CorruptedMetadataError(
+      `활성 세대의 상태가 ACTIVE가 아닙니다. 현재 상태: ${generation.state}`
+    );
+  }
+
+  return {
+    activeProfileId,
+    activeGenerationId,
+    epoch,
+    writeFence,
+    schemaVersion: schemaVersion as number,
+  };
 }
 
 export async function initializeDatabase(
@@ -126,34 +217,16 @@ export async function initializeDatabase(
       const metaEntries = await db.meta.toArray();
       const metaMap = new Map(metaEntries.map((e) => [e.key, e.value]));
 
-      const hasInitialized =
-        metaMap.has("activeProfileId") &&
-        metaMap.has("activeGenerationId") &&
-        metaMap.has("epoch");
-
-      if (hasInitialized) {
-        return {
-          activeProfileId: String(metaMap.get("activeProfileId") ?? "p_default"),
-          activeGenerationId: String(
-            metaMap.get("activeGenerationId") ?? "g_default"
-          ),
-          epoch: Number(metaMap.get("epoch") ?? 1),
-          writeFence: Boolean(metaMap.get("writeFence") ?? false),
-          schemaVersion: Number(metaMap.get("schemaVersion") ?? 1),
-        };
+      // 1. Existing database: MUST verify integrity of safety metadata
+      if (metaEntries.length > 0) {
+        return await verifyAndGetSystemMeta(metaMap, db);
       }
 
-      // Check for partial corruption (e.g. some meta keys exist but core ones are missing)
-      if (metaEntries.length > 0 && !hasInitialized) {
-        throw new Error(
-          "데이터베이스 메타데이터가 손상되었습니다. 기존 데이터를 보호하기 위해 초기화를 중단합니다."
-        );
-      }
-
+      // 2. Clean initial run: meta store is completely empty
       const defaultProfileId = "p_default";
       const defaultGenerationId = "g_default";
       const defaultEpoch = 1;
-      const defaultSchemaVersion = 1;
+      const defaultSchemaVersion = SUPPORTED_SCHEMA_VERSION;
       const now = new Date().toISOString();
 
       // 1. Create default profile if not exists

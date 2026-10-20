@@ -38,3 +38,12 @@ export class ConflictError extends Error {
     this.name = "ConflictError";
   }
 }
+
+export class CorruptedMetadataError extends Error {
+  constructor(
+    message = "데이터베이스 안전 메타데이터가 손상되었거나 누락되어 작업이 차단되었습니다."
+  ) {
+    super(message);
+    this.name = "CorruptedMetadataError";
+  }
+}

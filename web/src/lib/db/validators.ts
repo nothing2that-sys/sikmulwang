@@ -104,3 +104,75 @@ export function getLocalDateString(date = new Date()): string {
   const day = String(date.getDate()).padStart(2, "0");
   return `${year}-${month}-${day}`;
 }
+
+//+_+// Validates that expectedRevision is a strictly positive integer
+export function validateExpectedRevision(expectedRevision: unknown): number {
+  if (
+    expectedRevision === undefined ||
+    expectedRevision === null ||
+    typeof expectedRevision !== "number" ||
+    !Number.isFinite(expectedRevision) ||
+    !Number.isInteger(expectedRevision) ||
+    expectedRevision < 1
+  ) {
+    throw new ValidationError(
+      `유효한 기대 revision(1 이상의 정수)을 지정해야 합니다. 입력값: ${String(expectedRevision)}`
+    );
+  }
+  return expectedRevision;
+}
+
+//+_+// Strict regex for UTC ISO8601 timestamp: YYYY-MM-DDTHH:mm:ssZ or YYYY-MM-DDTHH:mm:ss.sssZ
+const UTC_ISO_8601_REGEX =
+  /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})(?:\.(\d{1,3}))?Z$/;
+
+//+_+// Validates that effectiveAt is a valid, real UTC ISO8601 timestamp string
+export function validateEffectiveTimestamp(value: unknown, fieldName = "시각"): string {
+  if (value === undefined || value === null) {
+    throw new ValidationError(`${fieldName}에 유효한 UTC ISO8601 타임스탬프 문자열을 입력해야 합니다.`);
+  }
+  if (typeof value !== "string" || !value.trim()) {
+    throw new ValidationError(`${fieldName}에 유효한 UTC ISO8601 타임스탬프 문자열을 입력해야 합니다.`);
+  }
+
+  const trimmed = value.trim();
+  const match = UTC_ISO_8601_REGEX.exec(trimmed);
+  if (!match) {
+    throw new ValidationError(
+      `${fieldName}는 유효한 UTC ISO8601 형식(예: 2026-10-19T10:00:00.000Z)이어야 합니다. 입력값: ${trimmed}`
+    );
+  }
+
+  const year = parseInt(match[1], 10);
+  const month = parseInt(match[2], 10);
+  const day = parseInt(match[3], 10);
+  const hour = parseInt(match[4], 10);
+  const minute = parseInt(match[5], 10);
+  const second = parseInt(match[6], 10);
+  const ms = match[7] ? parseInt(match[7].padEnd(3, "0"), 10) : 0;
+
+  if (month < 1 || month > 12) {
+    throw new ValidationError(`${fieldName}의 월(1~12)이 올바르지 않습니다: ${trimmed}`);
+  }
+  if (hour < 0 || hour > 23 || minute < 0 || minute > 59 || second < 0 || second > 59) {
+    throw new ValidationError(`${fieldName}의 시간, 분, 초가 올바른 범위 내에 있어야 합니다: ${trimmed}`);
+  }
+
+  const parsed = new Date(Date.UTC(year, month - 1, day, hour, minute, second, ms));
+  if (
+    !Number.isFinite(parsed.getTime()) ||
+    parsed.getUTCFullYear() !== year ||
+    parsed.getUTCMonth() !== month - 1 ||
+    parsed.getUTCDate() !== day ||
+    parsed.getUTCHours() !== hour ||
+    parsed.getUTCMinutes() !== minute ||
+    parsed.getUTCSeconds() !== second ||
+    parsed.getUTCMilliseconds() !== ms
+  ) {
+    throw new ValidationError(
+      `${fieldName}에 실제 달력 또는 시계에 존재하지 않는 잘못된 시각이 입력되었습니다: ${trimmed}`
+    );
+  }
+
+  return parsed.toISOString();
+}

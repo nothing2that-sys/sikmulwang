@@ -26,6 +26,7 @@ import type {
   SunExposure,
 } from "../../lib/db/types";
 import { getEnvironmentHistories } from "../../lib/db/plantingRepository";
+import type { UpdateLocationParams } from "../../lib/db/locationRepository";
 import { getLocalDateString } from "../../lib/db/validators";
 import { AlertCircle, RefreshCw, Plus, Edit2, Trash2 } from "lucide-react";
 
@@ -55,7 +56,6 @@ export function PlantsPage() {
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isManageLocationsOpen, setIsManageLocationsOpen] = useState(false);
   const [managingPlantId, setManagingPlantId] = useState<string | null>(null);
-  const [plantDialogVersion, setPlantDialogVersion] = useState<number>(0);
 
   // Sync managingPlant with latest record in plantings
   const managingPlant = managingPlantId
@@ -230,7 +230,7 @@ export function PlantsPage() {
 
       {managingPlant && (
         <ManagePlantDialog
-          key={`${managingPlant.id}-${plantDialogVersion}`}
+          key={managingPlant.id}
           plant={managingPlant}
           locations={locations}
           onClose={() => setManagingPlantId(null)}
@@ -257,9 +257,9 @@ export function PlantsPage() {
             await splitPlanting(
               managingPlant.id,
               splitQty,
+              managingPlant.revision,
               newName,
-              reason,
-              managingPlant.revision
+              reason
             );
           }}
           onDelete={async () => {
@@ -276,7 +276,6 @@ export function PlantsPage() {
           }
           onRefreshLatest={async () => {
             await refresh();
-            setPlantDialogVersion((v) => v + 1);
           }}
         />
       )}
@@ -541,7 +540,7 @@ function ManagePlantDialog({
   onDelete: () => Promise<void>;
   getActiveCycle: () => Promise<CycleRecord | undefined>;
   onStartCycle: (startDate: string) => Promise<CycleRecord>;
-  onEndCycle: (cycleId: string, endDate: string, expectedRevision?: number) => Promise<CycleRecord>;
+  onEndCycle: (cycleId: string, endDate: string, expectedRevision: number) => Promise<CycleRecord>;
   fetchHistories: () => Promise<EnvironmentHistoryRecord[]>;
   onRefreshLatest: () => Promise<void>;
 }) {
@@ -578,7 +577,9 @@ function ManagePlantDialog({
     await onRefreshLatest();
     setIsConflict(false);
     setErrorMsg("");
-    setMessage("최신 데이터를 다시 불러왔습니다.");
+    setMessage("최신 데이터를 다시 확인했습니다. 작성 중인 초안은 유지되며, 저장 버튼을 누르면 현재 초안으로 다시 저장됩니다.");
+    getActiveCycle().then(setActiveCycle);
+    fetchHistories().then(setHistories);
   };
 
   return (
@@ -652,6 +653,34 @@ function ManagePlantDialog({
               required
             />
           </div>
+          {editName !== plant.displayName && (
+            <div
+              style={{
+                fontSize: "0.85rem",
+                color: "var(--muted)",
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+                background: "var(--surface)",
+                padding: "0.4rem 0.6rem",
+                borderRadius: "4px",
+              }}
+            >
+              <span>저장소 현재 이름: <strong>{plant.displayName}</strong></span>
+              <button
+                type="button"
+                className="button secondary"
+                style={{ fontSize: "0.75rem", padding: "0.2rem 0.5rem" }}
+                onClick={() => {
+                  setEditName(plant.displayName);
+                  setEditUnit(plant.unit);
+                  setEditStatus(plant.growingStatus);
+                }}
+              >
+                저장소 값으로 초안 덮어쓰기
+              </button>
+            </div>
+          )}
           <div style={{ display: "flex", gap: "0.5rem" }}>
             <div style={{ flex: 1 }}>
               <label htmlFor={`${id}-edit-status`} style={{ display: "block", fontSize: "0.9rem", fontWeight: 600 }}>
@@ -987,17 +1016,10 @@ function ManageLocationsDialog({
   }) => Promise<LocationRecord>;
   onEditLocation: (
     id: string,
-    params: {
-      label?: string;
-      environmentType?: EnvironmentType;
-      rainfallExposure?: RainfallExposure;
-      sunExposure?: SunExposure;
-      timeZone?: string;
-      expectedRevision?: number;
-    },
-    expectedRevision?: number
+    params: Omit<UpdateLocationParams, "expectedRevision">,
+    expectedRevision: number
   ) => Promise<LocationRecord>;
-  onDeleteLocation: (id: string, expectedRevision?: number) => Promise<void>;
+  onDeleteLocation: (id: string, expectedRevision: number) => Promise<void>;
 }) {
   const id = useId();
   const [isAddOpen, setIsAddOpen] = useState(false);

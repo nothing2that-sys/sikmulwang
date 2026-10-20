@@ -264,16 +264,18 @@ test.describe("P1 Local Data Foundation — UI & Persistence", () => {
 
     //+_+// Tab 2 clicks refresh button to reload latest version (rev 2)
     await page2.getByRole("button", { name: "최신 정보 확인 및 다시 불러오기" }).click();
-    await expect(
-      page2.getByRole("heading", { name: "동시성 바질 (수정됨) 관리" })
-    ).toBeVisible();
+    await expect(page2.getByText("버전(Rev): 2")).toBeVisible();
 
-    //+_+// Tab 2 now saves successfully
-    await page2.getByLabel("식물 이름").fill("동시성 바질 (최종 해결)");
+    //+_+// R1 fix verification: Tab 2's uncommitted draft MUST be preserved
+    await expect(page2.getByLabel("식물 이름")).toHaveValue("동시성 바질 충돌 시도");
+    await expect(page2.getByText("저장소 현재 이름: 동시성 바질 (수정됨)")).toBeVisible();
+
+    //+_+// Tab 2 now saves immediately without re-typing, applying draft to rev 2 -> 3
     await page2.getByRole("button", { name: "기본 정보 저장" }).click();
     await expect(
       page2.getByText("기본 정보를 성공적으로 수정했습니다.")
     ).toBeVisible();
+    await expect(page2.getByText("버전(Rev): 3")).toBeVisible();
 
     await page2.close();
   });
