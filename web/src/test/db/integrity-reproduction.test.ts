@@ -583,5 +583,185 @@ describe("P1 Data Integrity Defect Reproduction Tests", () => {
         )
       ).rejects.toThrow(CorruptedMetadataError);
     });
+
+    it("R5 Case 1: blocks write and preserves data when activeProfileId key is missing", async () => {
+      const meta = await initializeDatabase(db);
+      const { planting } = await createPlanting(db, meta.epoch, meta.activeGenerationId, {
+        displayName: "R5-1 검증 식물",
+        groupType: "GROUP",
+        quantity: 5,
+        unit: "개",
+        locationId: "loc_indoor_living",
+      });
+
+      // Inject corruption: delete activeProfileId
+      await db.meta.delete("activeProfileId");
+
+      let callbackExecuted = false;
+      await expect(
+        withWriteTransaction(
+          db,
+          [db.plantings],
+          meta.epoch,
+          meta.activeGenerationId,
+          async () => {
+            callbackExecuted = true;
+          }
+        )
+      ).rejects.toThrow(CorruptedMetadataError);
+      expect(callbackExecuted).toBe(false);
+
+      // Attempt domain repository write
+      await expect(
+        changePlantingQuantity(
+          db,
+          meta.epoch,
+          meta.activeGenerationId,
+          planting.id,
+          4,
+          "수량 감소 시도",
+          planting.revision
+        )
+      ).rejects.toThrow(CorruptedMetadataError);
+
+      // Verify data and revision unchanged
+      const freshPlanting = await db.plantings.get([meta.activeGenerationId, planting.id]);
+      expect(freshPlanting?.quantity).toBe(5);
+      expect(freshPlanting?.revision).toBe(1);
+      expect(freshPlanting?.quantityChangeReason).toBeNull();
+
+      // Verify metadata was not auto-repaired
+      expect(await db.meta.get("activeProfileId")).toBeUndefined();
+    });
+
+    it("R5 Case 2: blocks write and preserves data when active profile record is missing", async () => {
+      const meta = await initializeDatabase(db);
+      const { planting } = await createPlanting(db, meta.epoch, meta.activeGenerationId, {
+        displayName: "R5-2 검증 식물",
+        groupType: "GROUP",
+        quantity: 5,
+        unit: "개",
+        locationId: "loc_indoor_living",
+      });
+
+      // Inject corruption: delete active profile record
+      await db.profiles.delete(meta.activeProfileId);
+
+      await expect(
+        changePlantingQuantity(
+          db,
+          meta.epoch,
+          meta.activeGenerationId,
+          planting.id,
+          4,
+          "수량 감소 시도",
+          planting.revision
+        )
+      ).rejects.toThrow(CorruptedMetadataError);
+
+      const freshPlanting = await db.plantings.get([meta.activeGenerationId, planting.id]);
+      expect(freshPlanting?.quantity).toBe(5);
+      expect(freshPlanting?.revision).toBe(1);
+      expect(freshPlanting?.quantityChangeReason).toBeNull();
+      expect(await db.profiles.get(meta.activeProfileId)).toBeUndefined();
+    });
+
+    it("R5 Case 3: blocks write and preserves data when active generation record is missing", async () => {
+      const meta = await initializeDatabase(db);
+      const { planting } = await createPlanting(db, meta.epoch, meta.activeGenerationId, {
+        displayName: "R5-3 검증 식물",
+        groupType: "GROUP",
+        quantity: 5,
+        unit: "개",
+        locationId: "loc_indoor_living",
+      });
+
+      // Inject corruption: delete active generation record
+      await db.generationRegistry.delete(meta.activeGenerationId);
+
+      await expect(
+        changePlantingQuantity(
+          db,
+          meta.epoch,
+          meta.activeGenerationId,
+          planting.id,
+          4,
+          "수량 감소 시도",
+          planting.revision
+        )
+      ).rejects.toThrow(CorruptedMetadataError);
+
+      const freshPlanting = await db.plantings.get([meta.activeGenerationId, planting.id]);
+      expect(freshPlanting?.quantity).toBe(5);
+      expect(freshPlanting?.revision).toBe(1);
+      expect(freshPlanting?.quantityChangeReason).toBeNull();
+      expect(await db.generationRegistry.get(meta.activeGenerationId)).toBeUndefined();
+    });
+
+    it("R5 Case 4: blocks write and preserves data when active generation is ARCHIVED", async () => {
+      const meta = await initializeDatabase(db);
+      const { planting } = await createPlanting(db, meta.epoch, meta.activeGenerationId, {
+        displayName: "R5-4 검증 식물",
+        groupType: "GROUP",
+        quantity: 5,
+        unit: "개",
+        locationId: "loc_indoor_living",
+      });
+
+      // Inject corruption: set state to ARCHIVED
+      await db.generationRegistry.update(meta.activeGenerationId, { state: "ARCHIVED" });
+
+      await expect(
+        changePlantingQuantity(
+          db,
+          meta.epoch,
+          meta.activeGenerationId,
+          planting.id,
+          4,
+          "수량 감소 시도",
+          planting.revision
+        )
+      ).rejects.toThrow(CorruptedMetadataError);
+
+      const freshPlanting = await db.plantings.get([meta.activeGenerationId, planting.id]);
+      expect(freshPlanting?.quantity).toBe(5);
+      expect(freshPlanting?.revision).toBe(1);
+      expect(freshPlanting?.quantityChangeReason).toBeNull();
+      const gen = await db.generationRegistry.get(meta.activeGenerationId);
+      expect(gen?.state).toBe("ARCHIVED");
+    });
+
+    it("R5 Case 5: blocks write and preserves data when generation's profileId mismatches", async () => {
+      const meta = await initializeDatabase(db);
+      const { planting } = await createPlanting(db, meta.epoch, meta.activeGenerationId, {
+        displayName: "R5-5 검증 식물",
+        groupType: "GROUP",
+        quantity: 5,
+        unit: "개",
+        locationId: "loc_indoor_living",
+      });
+
+      // Inject corruption: profileId mismatch
+      await db.generationRegistry.update(meta.activeGenerationId, { profileId: "prf_mismatch_other" });
+
+      await expect(
+        changePlantingQuantity(
+          db,
+          meta.epoch,
+          meta.activeGenerationId,
+          planting.id,
+          4,
+          "수량 감소 시도",
+          planting.revision
+        )
+      ).rejects.toThrow(CorruptedMetadataError);
+
+      const freshPlanting = await db.plantings.get([meta.activeGenerationId, planting.id]);
+      expect(freshPlanting?.quantity).toBe(5);
+      expect(freshPlanting?.revision).toBe(1);
+      expect(freshPlanting?.quantityChangeReason).toBeNull();
+      const gen = await db.generationRegistry.get(meta.activeGenerationId);
+      expect(gen?.profileId).toBe("prf_mismatch_other");
+    });
   });
 });

@@ -1,8 +1,7 @@
-//+_+// Transaction execution with write fence and epoch validation
+//+_+// Transaction execution with unified metadata verification, write fence, and epoch validation
 import type { Table } from "dexie";
-import type { SikmulwangDB } from "./database";
+import { verifyAndGetSystemMeta, type SikmulwangDB } from "./database";
 import {
-  CorruptedMetadataError,
   StaleSessionError,
   WriteFenceActiveError,
 } from "./errors";
@@ -21,52 +20,37 @@ export async function withWriteTransaction<T>(
   sessionGenerationId: string,
   fn: (ctx: TransactionContext) => Promise<T>
 ): Promise<T> {
-  const storesToLock = [db.meta, ...targetStores];
+  //+_+// Ensure meta, profiles, and generationRegistry are always locked together with target stores without duplicates
+  const storesToLock = Array.from(
+    new Set([db.meta, db.profiles, db.generationRegistry, ...targetStores])
+  );
 
   try {
     return await db.transaction("rw", storesToLock, async () => {
       const metaEntries = await db.meta.toArray();
       const metaMap = new Map(metaEntries.map((e) => [e.key, e.value]));
 
-      //+_+// Strict validation of mandatory safety metadata before writing
-      if (
-        !metaMap.has("writeFence") ||
-        typeof metaMap.get("writeFence") !== "boolean" ||
-        !metaMap.has("epoch") ||
-        typeof metaMap.get("epoch") !== "number" ||
-        !Number.isInteger(metaMap.get("epoch")) ||
-        (metaMap.get("epoch") as number) < 1 ||
-        !metaMap.has("activeGenerationId") ||
-        typeof metaMap.get("activeGenerationId") !== "string" ||
-        !(metaMap.get("activeGenerationId") as string).trim() ||
-        !metaMap.has("schemaVersion") ||
-        metaMap.get("schemaVersion") !== 1
-      ) {
-        throw new CorruptedMetadataError(
-          "필수 안전 메타데이터가 손상되었거나 누락되어 쓰기 작업이 차단되었습니다."
-        );
-      }
+      //+_+// Strict unified metadata and pointer verification inside the same write transaction
+      const systemMeta = await verifyAndGetSystemMeta(metaMap, db);
 
-      const writeFence = metaMap.get("writeFence") as boolean;
-      if (writeFence) {
+      //+_+// Check write fence state
+      if (systemMeta.writeFence) {
         throw new WriteFenceActiveError();
       }
 
-      const currentEpoch = metaMap.get("epoch") as number;
-      const currentGenerationId = metaMap.get("activeGenerationId") as string;
-
+      //+_+// Check session epoch and generation match
       if (
-        currentEpoch !== sessionEpoch ||
-        currentGenerationId !== sessionGenerationId
+        systemMeta.epoch !== sessionEpoch ||
+        systemMeta.activeGenerationId !== sessionGenerationId
       ) {
         throw new StaleSessionError(
-          `세션 불일치: 기대한 epoch=${sessionEpoch}, 실제 epoch=${currentEpoch}`
+          `세션 불일치: 기대한 epoch=${sessionEpoch}, 실제 epoch=${systemMeta.epoch}`
         );
       }
 
       const ctx: TransactionContext = {
-        generationId: currentGenerationId,
-        epoch: currentEpoch,
+        generationId: systemMeta.activeGenerationId,
+        epoch: systemMeta.epoch,
         nowUtc: new Date().toISOString(),
       };
 
