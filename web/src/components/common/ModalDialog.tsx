@@ -48,6 +48,7 @@ export function ModalDialog({
       }}
       onCancel={(event) => {
         event.preventDefault();
+        event.stopPropagation();
         onClose();
       }}
     >

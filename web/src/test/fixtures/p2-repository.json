@@ -1,0 +1,6 @@
+[
+  {"id":"RULE-05","commands":[{"kind":"WATERED","seq":0,"key":"same","at":"2026-10-14T00:00:00Z"},{"kind":"WATERED","seq":0,"key":"same","at":"2026-10-14T00:00:00Z"}],"events":1,"observations":0,"lastWatered":"2026-10-14T00:00:00.000Z","due":"2026-10-19","openSeq":1},
+  {"id":"RULE-06","commands":[{"kind":"WATERED","seq":0,"key":"first","at":"2026-10-14T00:00:00Z"},{"kind":"MOIST","seq":0,"key":"second","at":"2026-10-14T00:00:00Z"}],"events":1,"observations":0,"lastWatered":"2026-10-14T00:00:00.000Z","due":"2026-10-19","openSeq":1},
+  {"id":"RULE-07","commands":[{"kind":"WATERED","seq":0,"key":"first","at":"2026-10-12T00:00:00Z"},{"kind":"WATERED","seq":1,"key":"second","at":"2026-10-10T00:00:00Z"}],"events":2,"observations":0,"lastWatered":"2026-10-12T00:00:00.000Z","due":"2026-10-17","openSeq":2},
+  {"id":"RULE-08","commands":[{"kind":"WATERED","seq":0,"key":"first","at":"2026-10-10T00:00:00Z"},{"kind":"WATERED","seq":1,"key":"second","at":"2026-10-12T00:00:00Z"},{"kind":"UNDO","seq":1,"key":"undo","at":"2026-10-20T03:00:00Z"}],"events":3,"observations":0,"lastWatered":"2026-10-10T00:00:00.000Z","due":"2026-10-15","openSeq":1}
+]

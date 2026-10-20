@@ -70,7 +70,7 @@ export function AppShell({ children }: { children: ReactNode }) {
       </main>
       <footer className="footer">
         작은 돌봄이 자라는 곳 · 식물왕
-        <span>Phase 0 미리보기 · 개인 데이터 저장 기능은 준비 중</span>
+        <span>식물과 관리 기록은 이 기기의 브라우저에 저장됩니다</span>
       </footer>
       <ConfirmDialog
         open={confirm && Boolean(worker)}
@@ -83,7 +83,7 @@ export function AppShell({ children }: { children: ReactNode }) {
         }}
       >
         <p>
-          작성 중인 미리보기 입력은 저장되지 않습니다. 필요한 내용을 먼저 복사해
+          아직 저장하지 않은 입력은 사라집니다. 필요한 내용을 먼저 복사해
           주세요.
         </p>
       </ConfirmDialog>

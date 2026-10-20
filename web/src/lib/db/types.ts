@@ -129,7 +129,11 @@ export interface TaxonSnapshotRecord {
   sourceUrl: string | null;
 }
 
-export interface CareEventRecord {
+export interface CareRecordMeta {
+  createdAt: string; updatedAt: string; revision: number; schemaVersion: number;
+}
+
+export interface CareEventRecord extends CareRecordMeta {
   generationId: string;
   id: string;
   cycleId: string;
@@ -140,17 +144,20 @@ export interface CareEventRecord {
   eventStatus: string;
 }
 
-export interface ObservationRecord {
+export interface ObservationRecord extends CareRecordMeta {
   generationId: string;
   id: string;
   cycleId: string;
+  correctionOfId: string | null;
+  eventStatus: string;
   observationKind: string;
   value: string;
   occurredAt: string;
   idempotencyKey: string;
 }
 
-export interface TaskOccurrenceRecord {
+export interface TaskOccurrenceRecord extends CareRecordMeta {
+  priority: number;
   generationId: string;
   id: string;
   cycleId: string;
@@ -163,27 +170,30 @@ export interface TaskOccurrenceRecord {
   resolutionId: string | null;
 }
 
-export interface TaskChangeRecord {
+export interface TaskChangeRecord extends CareRecordMeta {
   generationId: string;
   id: string;
   taskId: string;
   previousState: string;
   nextState: string;
+  idempotencyKey: string;
+  requestBody: string;
   sourceId: string;
   occurredAt: string;
 }
 
-export interface CareRuleRecord {
+export interface CareRuleRecord extends CareRecordMeta {
   generationId: string;
   id: string;
   version: string;
   actionKind: string;
   inspectionDays: number | null;
+  cycleId: string;
   applicability: string;
   provenance: string;
 }
 
-export interface RuleSnapshotRecord {
+export interface RuleSnapshotRecord extends CareRecordMeta {
   generationId: string;
   id: string;
   stableRuleId: string;
@@ -192,7 +202,10 @@ export interface RuleSnapshotRecord {
   sha256: string;
 }
 
-export interface DecisionLogRecord {
+export interface DecisionLogRecord extends CareRecordMeta {
+  idempotencyKey: string;
+  requestBody: string;
+  resultTaskId: string | null;
   generationId: string;
   id: string;
   targetType: string;
@@ -201,6 +214,8 @@ export interface DecisionLogRecord {
   inputSnapshot: string;
   ruleSnapshotIds: string[];
   outputSnapshot: string;
+  inputDigest: string;
+  ruleSnapshotHash: string;
   evaluatedAt: string;
 }
 

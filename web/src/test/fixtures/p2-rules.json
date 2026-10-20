@@ -1,0 +1,8 @@
+[
+  {"id":"RULE-01","kind":"INITIAL","due":"2026-10-14","seq":0},
+  {"id":"RULE-02","kind":"WATERED","occurredAt":"2026-10-14T00:00:00Z","due":"2026-10-19","seq":1},
+  {"id":"RULE-03","kind":"MOIST","occurredAt":"2026-10-14T00:00:00Z","due":"2026-10-16","seq":1},
+  {"id":"RULE-04","kind":"SNOOZED","due":"2026-10-15","seq":0},
+  {"id":"RULE-11","kind":"MISSING","due":null,"seq":null},
+  {"id":"RULE-12","kind":"ENDED","due":null,"seq":null}
+]

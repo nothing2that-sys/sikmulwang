@@ -1,3 +1,4 @@
+import { CarePanel } from "./CarePanel";
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import {
@@ -35,7 +36,7 @@ const demoTasks: TaskPreview[] = [
     id: "three",
     plantName: "데모 상추",
     title: "재배 공간 살펴보기",
-    description: "관리 일정 계산은 아직 연결되지 않았어요.",
+    description: "개발용 예시이며 실제 관리 기록과 별개예요.",
   },
   {
     id: "four",
@@ -83,6 +84,7 @@ export function TodayPage() {
         </section>
       )}
 
+      <CarePanel />
       <div className="today-grid">
         <section className="care-panel card">
           <SectionHeader
@@ -97,7 +99,7 @@ export function TodayPage() {
             {demo
               ? "개발용 예시입니다. 확인할 실제 식물은 0개입니다."
               : plantCount > 0
-              ? `오늘 확인할 식물 ${plantCount}개 · 관리 일정 엔진(Phase 2) 준비 중`
+              ? `오늘 확인할 식물 ${plantCount}개 · 사용자 확인 간격을 설정해 주세요`
               : "오늘 확인할 식물 0개 · 등록된 식물이 없어요"}
           </p>
 
@@ -114,7 +116,7 @@ export function TodayPage() {
             <div className="card space-section" style={{ background: "var(--background)" }}>
               <h3>함께하는 식물 ({plantCount}개)</h3>
               <p className="card-summary">
-                내 식물이 로컬 저장소에 안전하게 등록되어 있어요. 맞춤형 돌봄 규칙 엔진(Phase 2)이 준비되면 매일의 점검 일정이 여기에 표시됩니다.
+                내 식물이 로컬 저장소에 안전하게 등록되어 있어요. 명시적으로 설정한 간격의 토양 확인 작업은 위 돌봄 목록에서 확인할 수 있어요.
               </p>
               <div style={{ marginTop: "0.75rem" }}>
                 <Link className="button" to="/plants">
@@ -167,7 +169,7 @@ export function TodayPage() {
             <h2>이번 주도 천천히</h2>
             <p>
               {plantCount > 0
-                ? `등록된 식물 ${plantCount}개 · 주간 일정 엔진(Phase 2) 준비 중`
+                ? `등록된 식물 ${plantCount}개 · 명시적으로 설정한 간격으로 토양을 확인해요`
                 : "등록된 식물이 없어 예정된 작업이 없어요."}
             </p>
             <Link className="text-link" to="/week">
@@ -209,14 +211,15 @@ export function WeekPage() {
       <PageHeading
         eyebrow="이번 주"
         title="일주일의 돌봄"
-        description="실제 관리 일정은 관리 엔진(Phase 2) 연결 후 자동 계산됩니다."
+        description="사용자가 설정한 간격에 따라 토양 확인 일정을 표시합니다."
       />
+      <CarePanel week />
       <EmptyState
-        title={plantings.length > 0 ? "예정된 자동 일정이 아직 없어요" : "예정된 작업이 없어요"}
+        title={plantings.length > 0 ? "사용자 간격을 설정해 주세요" : "예정된 작업이 없어요"}
         description={
           plantings.length > 0
-            ? `현재 등록된 ${plantings.length}개의 식물은 로컬에 저장되어 있으며, 돌봄 규칙 엔진(Phase 2) 준비 후 일정이 계산됩니다.`
-            : "현재는 개인 식물과 관리 작업을 저장하지 않습니다."
+            ? `현재 등록된 ${plantings.length}개의 식물은 로컬에 저장되어 있으며, 명시적으로 설정한 간격의 일정이 위에 표시됩니다.`
+            : "식물을 등록하고 활성 시즌의 확인 간격을 설정해 주세요."
         }
         action={
           <div className="button-row">

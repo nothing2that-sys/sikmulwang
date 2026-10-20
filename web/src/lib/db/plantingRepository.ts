@@ -664,7 +664,7 @@ export async function purgePlanting(
 
   await withWriteTransaction(
     db,
-    [db.plantings, db.environmentHistory, db.cycles],
+    [db.plantings, db.environmentHistory, db.cycles, db.careEvents, db.observations, db.taskOccurrences, db.careRules],
     sessionEpoch,
     sessionGenerationId,
     async ({ generationId }) => {
@@ -681,6 +681,14 @@ export async function purgePlanting(
         );
       }
 
+      const linkedCycles = await db.cycles.where('generationId').equals(generationId).filter(c => c.plantingId === id).primaryKeys();
+      const cycleIds = new Set(linkedCycles.map(key => key[1]));
+      //+_+// P2 history must not be orphaned by the P1 physical purge path.
+      for (const store of [db.careEvents, db.observations, db.taskOccurrences, db.careRules]) {
+        if ((await store.where('generationId').equals(generationId).toArray()).some(r => cycleIds.has(r.cycleId))) {
+          throw new ValidationError('관리 이력이 있는 식물은 영구 삭제할 수 없습니다. 휴지통에 보존해 주세요.');
+        }
+      }
       await db.plantings.delete([generationId, id]);
 
       //+_+// Purge linked environment histories and cycles

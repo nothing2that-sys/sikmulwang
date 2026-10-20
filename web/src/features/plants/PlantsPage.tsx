@@ -1,3 +1,4 @@
+import { CarePanel } from "../today/CarePanel";
 //+_+// P1 PlantsPage connected to IndexedDB for plant, location, group, and season CRUD with concurrency protection
 import { useState, useId, useEffect } from "react";
 import { Link } from "react-router-dom";
@@ -866,6 +867,7 @@ function ManagePlantDialog({
         </section>
       )}
 
+      <CarePanel plantingId={plant.id} />
       {/* 4. 시즌 관리 */}
       <section className="card" style={{ marginBottom: "1rem", background: "var(--background)" }}>
         <h3>시즌(Cycle) 관리</h3>
