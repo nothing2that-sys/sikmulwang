@@ -1,3 +1,4 @@
+import { BackupPanel } from './BackupPanel';
 //+_+// Settings page showing profile/generation metadata, locations, and trash management
 import { Link } from "react-router-dom";
 import {
@@ -153,24 +154,7 @@ export function SettingsPage() {
           )}
         </section>
 
-        {/* 4. 백업 및 복원 (Phase 4 예정) */}
-        <section className="card">
-          <h2>백업 및 복원</h2>
-          <p id="backup-hint">
-            안전한 데이터 계약 검증 이후 연결됩니다. 지금은 아무 파일도 가져오거나 내보내지 않습니다.
-          </p>
-          <div className="planned-actions">
-            <button disabled aria-describedby="backup-hint">
-              ZIP 내보내기 · Phase 4 예정
-            </button>
-            <button disabled aria-describedby="backup-hint">
-              백업 가져오기 · Phase 4 예정
-            </button>
-            <button disabled aria-describedby="backup-hint">
-              개인 Google Drive 연결 · Phase 7 예정
-            </button>
-          </div>
-        </section>
+        <BackupPanel />
 
         {/* 5. 표시 테마 */}
         <section className="card">

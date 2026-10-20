@@ -197,7 +197,7 @@ describe("journal and planned functionality", () => {
     expect(screen.getByRole('button', { name: '일기 저장' })).toBeDisabled();
     expect(screen.getByLabelText('사진 첨부')).toBeDisabled();
   });
-  it("does not expose operational backup actions", () => {
+  it("offers local ZIP backup without a Drive connection", async () => {
     app("/settings");
     for (const button of screen.getAllByRole("button"))
       expect(button).toBeDisabled();

@@ -493,7 +493,7 @@ test("200 percent text and reduced motion reflow across screens and expanded sta
   await page.goto("/settings");
   await apply200PercentAndCheckOverflow();
   await expect(
-    page.getByRole("button", { name: "ZIP 내보내기 · Phase 4 예정" }),
+    page.getByRole("button", { name: "ZIP 백업 만들기" }),
   ).toBeVisible();
 });
 

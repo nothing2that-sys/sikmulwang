@@ -116,7 +116,7 @@ function Editor({ id,epoch,generation }: { id: string; epoch: number; generation
   }
   const ownLinks = links.filter(l => l.ownerType === 'DIARY' && l.ownerId === id).sort((a,b) => a.sortOrder - b.sortOrder);
   return <PageContainer><PageHeading eyebrow="기기에 남기는 초록의 하루" title="오늘의 초록 이야기" description="날짜와 글은 자동으로 초안에 저장돼요. 저장 완료 문구를 확인해 주세요." />
-    <p>일기와 사진은 서버로 보내지 않습니다. 브라우저 저장소를 지우면 사라질 수 있어요. 백업 기능은 아직 제공하지 않습니다.</p>
+    <p>일기와 사진은 서버로 보내지 않습니다. 브라우저 저장소를 지우면 사라질 수 있어요. 브라우저 저장소를 지우기 전 설정에서 ZIP 백업을 보관해 주세요.</p>
     {readError && <p role="alert">{readError}</p>}
     <form className="card compose-form" onSubmit={event => { event.preventDefault(); void enqueue(async () => {
       const snapshot = { ...current.current,draftState: 'PUBLISHED' as const };

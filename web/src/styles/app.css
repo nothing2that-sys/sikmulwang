@@ -840,3 +840,7 @@
   .calendar-panel .calendar-heading { padding-inline: 4px; flex-wrap: wrap; }
   .calendar td { padding: 0; }
 }
+.backup-panel { overflow-wrap: anywhere; }
+.backup-file { display: grid; gap: .5rem; min-height: 44px; }
+.backup-file input { width: 100%; min-width: 0; }
+.backup-job { border-top: 1px solid var(--border); padding-block: 1rem; }
