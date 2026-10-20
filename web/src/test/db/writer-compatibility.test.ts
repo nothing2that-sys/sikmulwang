@@ -54,7 +54,7 @@ describe("P2 R1 compatibility transition with actual frozen P1 writers", () => {
   it("kept-open P1 purge/create/update are rejected and all records survive", async () => {
     const { planting, cycle } = await seedPlant();
     const meta = await initializeDatabase(db);
-    expect(meta).toMatchObject({ schemaVersion: 2, epoch: 2 });
+    expect(meta).toMatchObject({ schemaVersion: 3, epoch: 2 });
     await executeCare(db, meta.epoch, generation, { cycleId: cycle!.id, kind: "RULE", expectedRevision: 1, inspectionDays: 5, occurredAt: "2026-10-14T00:00:00.000Z", idempotencyKey: crypto.randomUUID() });
     const task = (await db.taskOccurrences.toArray())[0];
     await executeCare(db, meta.epoch, generation, { cycleId: cycle!.id, taskId: task.id, kind: "WATERED", expectedRevision: task.revision, occurredAt: "2026-10-14T00:00:00.000Z", idempotencyKey: crypto.randomUUID() });
@@ -83,10 +83,10 @@ describe("P2 R1 compatibility transition with actual frozen P1 writers", () => {
     const other = new SikmulwangDB(db.name);
     try {
       const metas = await Promise.all([initializeDatabase(db), initializeDatabase(other), initializeDatabase(db)]);
-      expect(metas.every(m => m.epoch === 2 && m.schemaVersion === 2)).toBe(true);
+      expect(metas.every(m => m.epoch === 2 && m.schemaVersion === 3)).toBe(true);
       const after = await state();
       for (const [name, rows] of Object.entries(before)) if (name !== "meta") expect(after[name]).toEqual(rows);
-      expect(await initializeDatabase(db)).toMatchObject({ epoch: 2, schemaVersion: 2 });
+      expect(await initializeDatabase(db)).toMatchObject({ epoch: 2, schemaVersion: 3 });
       expect(db.verno).toBe(1);
     } finally { other.close(); }
   });
@@ -140,7 +140,7 @@ describe("P2 R1 compatibility transition with actual frozen P1 writers", () => {
       }
     }
     expect(await db.ruleSnapshots.count()).toBe(frozen.stores.ruleSnapshots.length * 2);
-    expect(await initializeDatabase(db)).toMatchObject({ epoch: 2, schemaVersion: 2 });
+    expect(await initializeDatabase(db)).toMatchObject({ epoch: 2, schemaVersion: 3 });
     expect(await db.ruleSnapshots.count()).toBe(frozen.stores.ruleSnapshots.length * 2);
   });
 
@@ -154,7 +154,7 @@ describe("P2 R1 compatibility transition with actual frozen P1 writers", () => {
     const map = new Map((await db.meta.toArray()).map(row => [row.key, row.value]));
     await expect(verifyAndGetSystemMeta(map, db)).rejects.toThrow("지원하지 않는 스키마");
     db.meta.hook.updating.unsubscribe(fail);
-    expect(await initializeDatabase(db)).toMatchObject({ schemaVersion: 2, epoch: 2 });
+    expect(await initializeDatabase(db)).toMatchObject({ schemaVersion: 3, epoch: 2 });
     expect(await db.decisionLogs.toArray()).toEqual(before.decisionLogs);
     expect((await state()).mediaBlobs).toEqual(before.mediaBlobs);
   });
@@ -200,7 +200,7 @@ describe("P2 R1 compatibility transition with actual frozen P1 writers", () => {
 
   it("raw unused P1 fence helper does not downgrade the writer barrier", async () => {
     await initializeDatabase(db); await setP1Fence(old, false);
-    expect((await db.meta.get("schemaVersion"))?.value).toBe(2);
+    expect((await db.meta.get("schemaVersion"))?.value).toBe(3);
     await expect(seedPlant()).rejects.toThrow("지원하지 않는 스키마");
   });
 });

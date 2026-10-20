@@ -825,3 +825,18 @@
     scroll-behavior: auto !important;
   }
 }
+
+.journal-photo { display: block; max-width: 100%; width: 240px; height: auto; border-radius: 12px; object-fit: contain; }
+.journal-photos { display: flex; gap: 12px; flex-wrap: wrap; margin-block: 16px; }
+.journal-photos > div { max-width: 100%; }
+.journal-entry { padding-block: 20px; border-bottom: 1px solid var(--border); overflow-wrap: anywhere; }
+.journal-body { white-space: pre-wrap; overflow-wrap: anywhere; }
+.calendar-day { min-width: 0; width: 100%; min-height: 44px; padding: 2px; font: inherit; background: transparent; border: 0; color: inherit; cursor: pointer; }
+.calendar-day[aria-pressed="true"] { outline: 2px solid #286044; border-radius: 6px; }
+.compose-form fieldset { min-width: 0; }
+.compose-form a { display: inline-flex; align-items: center; min-height: 44px; min-width: 44px; }
+@media (max-width: 420px) {
+  .calendar-panel { margin-inline: calc(4px - 1.25rem); padding-inline: 0; }
+  .calendar-panel .calendar-heading { padding-inline: 4px; flex-wrap: wrap; }
+  .calendar td { padding: 0; }
+}

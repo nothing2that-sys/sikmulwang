@@ -220,7 +220,7 @@ export interface DecisionLogRecord extends CareRecordMeta {
   evaluatedAt: string;
 }
 
-export interface DiaryRecord {
+export interface DiaryRecord extends Partial<JournalMeta> {
   generationId: string;
   id: string;
   cycleId: string;
@@ -232,7 +232,7 @@ export interface DiaryRecord {
   revision: number;
 }
 
-export interface MediaRecord {
+export interface MediaRecord extends Partial<JournalMeta> {
   generationId: string;
   id: string;
   mimeType: string;
@@ -244,7 +244,7 @@ export interface MediaRecord {
   variants: string[];
 }
 
-export interface MediaBlobRecord {
+export interface MediaBlobRecord extends Partial<JournalMeta> {
   generationId: string;
   id: string;
   mediaId: string;
@@ -254,7 +254,7 @@ export interface MediaBlobRecord {
   byteLength: number;
 }
 
-export interface MediaLinkRecord {
+export interface MediaLinkRecord extends Partial<JournalMeta> {
   generationId: string;
   id: string;
   ownerType: string;
@@ -295,4 +295,22 @@ export interface FeedbackOverrideRecord {
   value: string;
   reason: string;
   updatedAt: string;
+}
+
+// Legacy placeholder rows remain byte-for-byte unchanged; only P3 rows have journalVersion.
+export interface JournalMeta {
+  journalVersion: 1;
+  createdAt: string;
+  updatedAt: string;
+  revision: number;
+  schemaVersion: 1;
+  recordStatus: 'ACTIVE' | 'TRASHED';
+}
+export type JournalEntry = DiaryRecord & JournalMeta & {
+  photoRecovery?: 'RESELECT_REQUIRED' | null;
+  tags: string[];
+  draftState: 'DRAFT' | 'PUBLISHED';
+}
+export type JournalMedia = MediaRecord & JournalMeta & {
+  processingState: 'READY';
 }

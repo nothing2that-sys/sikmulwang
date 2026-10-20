@@ -664,7 +664,7 @@ export async function purgePlanting(
 
   await withWriteTransaction(
     db,
-    [db.plantings, db.environmentHistory, db.cycles, db.careEvents, db.observations, db.taskOccurrences, db.careRules],
+    [db.plantings, db.environmentHistory, db.cycles, db.careEvents, db.observations, db.taskOccurrences, db.careRules, db.diaries, db.mediaLinks],
     sessionEpoch,
     sessionGenerationId,
     async ({ generationId }) => {
@@ -688,6 +688,10 @@ export async function purgePlanting(
         if ((await store.where('generationId').equals(generationId).toArray()).some(r => cycleIds.has(r.cycleId))) {
           throw new ValidationError('관리 이력이 있는 식물은 영구 삭제할 수 없습니다. 휴지통에 보존해 주세요.');
         }
+      }
+      if ((await db.diaries.where('generationId').equals(generationId).toArray()).some(r => cycleIds.has(r.cycleId)) ||
+          (await db.mediaLinks.where('generationId').equals(generationId).toArray()).some(r => r.ownerType === 'PLANTING' && r.ownerId === id)) {
+        throw new ValidationError('일기·사진이 있는 식물은 휴지통에 보존해 주세요.');
       }
       await db.plantings.delete([generationId, id]);
 

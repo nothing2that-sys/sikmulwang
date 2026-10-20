@@ -60,7 +60,7 @@ test("R1 native IndexedDB mid-transition quota failure preserves P1 data and rel
   await app.addInitScript(() => {
     const original = IDBObjectStore.prototype.put;
     IDBObjectStore.prototype.put = function(value, ...keys) {
-      if (this.name === "meta" && value.key === "schemaVersion" && value.value === 2 && !sessionStorage.getItem("transition-fault-used")) {
+      if (this.name === "meta" && value.key === "schemaVersion" && value.value === 3 && !sessionStorage.getItem("transition-fault-used")) {
         sessionStorage.setItem("transition-fault-used", "yes");
         throw new DOMException("Injected transition quota failure", "QuotaExceededError");
       }
@@ -75,7 +75,7 @@ test("R1 native IndexedDB mid-transition quota failure preserves P1 data and rel
   await expect(app.getByRole("heading", { name: "구 P1 브라우저 식물", exact: true })).toBeVisible();
   const after = await old.evaluate(() => window.legacyP1.dump());
   expect(after.plantings).toEqual(before.plantings); expect(after.cycles).toEqual(before.cycles);
-  expect(after.meta).toContainEqual(expect.objectContaining({ key: "schemaVersion", value: 2 }));
+  expect(after.meta).toContainEqual(expect.objectContaining({ key: "schemaVersion", value: 3 }));
   expect(after.meta).toContainEqual(expect.objectContaining({ key: "epoch", value: 2 }));
   expect(await errorName(() => old.evaluate(() => window.legacyP1.initialize()))).toContain("지원하지 않는 스키마");
 });

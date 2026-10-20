@@ -191,22 +191,11 @@ describe("journal and planned functionality", () => {
     expect(screen.getByRole("table").textContent).not.toEqual(caption);
     expect(screen.getByLabelText("식물별 보기")).toBeDisabled();
   });
-  it("accepts memory-only input, cancels then confirms clearing", async () => {
-    app("/journal/new");
-    await userEvent.type(screen.getByLabelText("제목 (선택)"), "테스트 제목");
-    await userEvent.click(
-      screen.getByRole("button", { name: "미리보기 입력 비우기" }),
-    );
-    await userEvent.click(screen.getByRole("button", { name: "취소" }));
-    expect(screen.getByLabelText("제목 (선택)")).toHaveValue("테스트 제목");
-    await userEvent.click(
-      screen.getByRole("button", { name: "미리보기 입력 비우기" }),
-    );
-    await userEvent.click(
-      screen.getByRole("button", { name: /^입력 비우기$/ }),
-    );
-    expect(screen.getByLabelText("제목 (선택)")).toHaveValue("");
-    expect(screen.getByRole("button", { name: "저장 준비 중" })).toBeDisabled();
+  it("requires a registered season and offers text-only journal entry", async () => {
+    app('/journal/new');
+    expect(await screen.findByRole('heading', { name: '오늘의 초록 이야기' })).toBeVisible();
+    expect(screen.getByRole('button', { name: '일기 저장' })).toBeDisabled();
+    expect(screen.getByLabelText('사진 첨부')).toBeDisabled();
   });
   it("does not expose operational backup actions", () => {
     app("/settings");

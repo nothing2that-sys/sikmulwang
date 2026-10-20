@@ -148,31 +148,10 @@ for (const width of [320, 360, 390, 768, 1280]) {
     await page.goto("/journal/new");
     await assertInteractiveTouchTargets(page);
     await page.getByLabel("제목 (선택)").fill("키보드 미리보기");
-    await page.getByRole("button", { name: "미리보기 입력 비우기" }).focus();
-    await page.keyboard.press("Enter");
-    await expect(
-      page.getByRole("dialog", { name: "미리보기 입력을 비울까요?" }),
-    ).toBeVisible();
-    await expect(
-      page.getByRole("button", { name: "취소", exact: true }),
-    ).toBeFocused();
-    await page.keyboard.press("Tab");
-    await expect(
-      page.getByRole("button", { name: "입력 비우기", exact: true }),
-    ).toBeFocused();
-    await page.keyboard.press("Tab");
-    await expect(
-      page.getByRole("button", { name: "취소", exact: true }),
-    ).toBeFocused();
-    await page.keyboard.press("Escape");
-    await expect(page.getByRole("dialog")).not.toBeVisible();
-    await expect(
-      page.getByRole("button", { name: "미리보기 입력 비우기" }),
-    ).toBeFocused();
-    await page.keyboard.press("Tab");
-    const focused = await page.locator(":focus").boundingBox();
-    if (width < 768)
-      expect(focused!.y + focused!.height).toBeLessThanOrEqual(nav!.y);
+    // P3 replaces the memory-only clear dialog with real journal actions. P1 dialog focus checks remain in p1-local-data.
+    await page.getByRole('link', { name: '일기장으로', exact: true }).focus();
+    await page.keyboard.press('Enter');
+    await expect(page.getByRole('heading', { level: 1, name: '일기장' })).toBeFocused();
     await page.evaluate(() => window.scrollTo(0, 0));
     await page.screenshot({
       path: `test-results/screenshots/journal-${width}.png`,
@@ -494,7 +473,7 @@ test("200 percent text and reduced motion reflow across screens and expanded sta
   await apply200PercentAndCheckOverflow();
   await page.getByLabel("제목 (선택)").fill("200% 확대 입력 확인");
   await expect(
-    page.getByRole("button", { name: "미리보기 입력 비우기" }),
+    page.getByRole("button", { name: "일기 저장", exact: true }),
   ).toBeVisible();
   expect(
     await page.evaluate(
@@ -748,7 +727,7 @@ test("desktop and mobile visual evidence", async ({ page }) => {
     ["today", "/", "오늘도, 초록과 함께", "오늘의 돌봄"],
     ["discover", "/discover", "식물 찾기", "샘플 탐색 결과"],
     ["plants", "/plants", "내 식물", "아직 함께하는 식물이 없어요"],
-    ["journal", "/journal", "일기장", "첫 이야기를 기다리고 있어요"],
+    ["journal", "/journal", "일기장", "저장된 일기가 없습니다."],
     ["settings", "/settings", "설정 및 데이터 관리", "백업 및 복원"],
   ];
 

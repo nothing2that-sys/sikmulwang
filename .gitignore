@@ -10,3 +10,5 @@ test-results/
 .vscode/
 *.log
 *.zip
+
+.test-temp/

@@ -104,8 +104,8 @@ export function setDbInstance(db: SikmulwangDB | null): void {
   defaultDbInstance = db;
 }
 
-//+_+// Global writer compatibility v2 is distinct from physical Dexie v1 and domain record schema v1.
-export const WRITER_COMPATIBILITY_VERSION = 2;
+//+_+// Global writer compatibility v3 is distinct from physical Dexie v1 and domain record schema v1.
+export const WRITER_COMPATIBILITY_VERSION = 3;
 export const SUPPORTED_SCHEMA_VERSION = WRITER_COMPATIBILITY_VERSION;
 export const RECORD_SCHEMA_VERSION = 1;
 
@@ -226,20 +226,20 @@ export async function initializeDatabase(
 
       // 1. Existing database: MUST verify integrity of safety metadata
       if (metaEntries.length > 0) {
-        if (metaMap.get("schemaVersion") === 1) {
-          const legacy = await validateSystemMeta(metaMap, db, 1);
+        if (metaMap.get("schemaVersion") === 1 || metaMap.get("schemaVersion") === 2) {
+          const legacy = await validateSystemMeta(metaMap, db, metaMap.get("schemaVersion") as number);
           if (legacy.writeFence) throw new WriteFenceActiveError();
           if (!Number.isSafeInteger(legacy.epoch + 1)) {
             throw new CorruptedMetadataError("호환성 전환에 필요한 epoch를 갱신할 수 없습니다.");
           }
           const now = new Date().toISOString();
           //+_+// Original domain rows/logs are immutable; verified snapshot aliases are append-only.
-          await preserveLegacyRuleSnapshotReferences(db, now);
+          if (legacy.schemaVersion === 1) await preserveLegacyRuleSnapshotReferences(db, now);
           await db.meta.put({ key: "epoch", value: legacy.epoch + 1, updatedAt: now });
           await db.meta.put({ key: "schemaVersion", value: SUPPORTED_SCHEMA_VERSION, updatedAt: now });
           await db.meta.put({
             key: "writerCompatibility",
-            value: { from: 1, to: SUPPORTED_SCHEMA_VERSION, recordSchemaVersion: RECORD_SCHEMA_VERSION },
+            value: { from: legacy.schemaVersion, to: SUPPORTED_SCHEMA_VERSION, recordSchemaVersion: RECORD_SCHEMA_VERSION },
             updatedAt: now,
           });
           return { ...legacy, epoch: legacy.epoch + 1, schemaVersion: SUPPORTED_SCHEMA_VERSION };

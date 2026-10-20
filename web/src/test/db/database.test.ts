@@ -59,7 +59,7 @@ describe("P1 Local Data Foundation — IndexedDB & Repositories", () => {
       expect(meta.activeGenerationId).toBe("g_default");
       expect(meta.epoch).toBe(1);
       expect(meta.writeFence).toBe(false);
-      expect(meta.schemaVersion).toBe(2);
+      expect(meta.schemaVersion).toBe(3);
 
       const locations = await listLocations(db, meta.activeGenerationId);
       expect(locations).toHaveLength(3);
