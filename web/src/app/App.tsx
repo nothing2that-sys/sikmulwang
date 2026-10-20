@@ -12,6 +12,7 @@ import { PlantsPage, PlantPreviewPage } from "../features/plants/PlantsPage";
 import { JournalPage } from "../features/journal/JournalPage";
 import { JournalComposePage } from "../features/journal/JournalComposePage";
 import { SettingsPage } from "../features/settings/SettingsPage";
+import { RecommendationsPage, OfficialPlantDetailPage } from "../features/discover/RecommendationsPage";
 import { NotFoundPage } from "./router/NotFoundPage";
 
 import { DbProvider } from "../lib/db/DbContext";
@@ -48,6 +49,8 @@ export function App() {
             <Routes>
               <Route path="/" element={<TodayPage />} />
               <Route path="/discover" element={<DiscoverPage />} />
+              <Route path="/discover/recommendations" element={<RecommendationsPage />} />
+              <Route path="/discover/recommendations/:id" element={<OfficialPlantDetailPage />} />
               <Route path="/discover/:id" element={<DemoPlantDetailPage />} />
               <Route path="/plants" element={<PlantsPage />} />
               <Route path="/plants/preview" element={<PlantPreviewPage />} />

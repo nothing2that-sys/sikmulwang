@@ -113,6 +113,7 @@ export function DiscoverPage() {
           검색 및 필터 초기화
         </button>
       </section>
+      <p><Link className="text-link" to="/discover/recommendations">공식 근거로 식물 찾기</Link></p>
       <div className="section-heading">
         <h2>샘플 탐색 결과</h2>
         <p role="status">{results.length}종</p>

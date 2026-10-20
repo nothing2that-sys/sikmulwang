@@ -1,0 +1,5 @@
+[
+  {"id":"rda-broccoli","name":"브로콜리","sourceId":"rda-100000733086-body","region":"KR_CENTRAL","method":"OUTDOOR_SOIL","stage":"SEEDLING","start":"04-01","end":"04-10","status":"INFO_INSUFFICIENT"},
+  {"id":"rda-lettuce","name":"상추","sourceId":"rda-100000733086-body","region":"KR_CENTRAL","method":"OUTDOOR_SOIL","stage":"SEEDLING","start":"04-11","end":"04-20","status":"INFO_INSUFFICIENT"},
+  {"id":"rda-cabbage","name":"양배추","sourceId":"rda-100000733086-body","region":"KR_CENTRAL","method":"OUTDOOR_SOIL","stage":"SEEDLING","start":"04-01","end":"04-10","status":"INFO_INSUFFICIENT"}
+]

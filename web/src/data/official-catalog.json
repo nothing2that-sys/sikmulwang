@@ -1,0 +1,188 @@
+{
+  "version": "p5-guide-v1",
+  "sources": [
+    {
+      "sourceId": "rda-100000733086-body",
+      "endpoint": "https://www.rda.go.kr/board/board.do?boardId=farmprmninfo&currPage=2&dataNo=100000733086&mode=updateCnt&prgId=day_farmprmninfoEntry&searchEDate=&searchSDate=",
+      "title": "텃밭작물마다 모종 심는 시기 달라요",
+      "publishedAt": "2017-04-03",
+      "licenseId": "KOGL-1",
+      "allowedUse": "COMMERCIAL_AND_NONCOMMERCIAL",
+      "transformAllowed": true,
+      "redistributionAllowed": true,
+      "reviewedAt": "2026-10-20",
+      "evidenceUrl": "https://www.rda.go.kr/board/board.do?boardId=farmprmninfo&currPage=2&dataNo=100000733086&mode=updateCnt&prgId=day_farmprmninfoEntry&searchEDate=&searchSDate=",
+      "licenseEvidenceUrl": "https://www.kogl.or.kr/info/license.do",
+      "reviewer": "Codex: 공식 본문·이용표시 대조, 농업 전문가 검수 아님",
+      "allowedFields": [
+        "canonicalName",
+        "regionCode",
+        "growingMethod",
+        "startStage",
+        "plantingWindow",
+        "guide"
+      ]
+    }
+  ],
+  "plants": [
+    {
+      "id": "rda-lettuce",
+      "taxonSnapshotId": "p5-2026-10-20-lettuce",
+      "canonicalName": "상추",
+      "assessmentReadiness": "GUIDE_ONLY",
+      "facts": [
+        {
+          "field": "canonicalName",
+          "value": "상추",
+          "sourceId": "rda-100000733086-body",
+          "locator": "본문: 작물별 모종 심는 시기에서 상추",
+          "transformation": "원문 한글 작물명만 채택; 품종·학명 식별로 확대하지 않음"
+        },
+        {
+          "field": "regionCode",
+          "value": "KR_CENTRAL",
+          "locator": "본문: 중부지방에서 실외재배를 기준으로",
+          "transformation": "중부지방을 제품의 수동 권역 코드로 표현; 개별 시군 매핑 없음",
+          "sourceId": "rda-100000733086-body"
+        },
+        {
+          "field": "growingMethod",
+          "value": "OUTDOOR_SOIL",
+          "locator": "본문: 중부지방에서 실외재배를 기준으로",
+          "transformation": "텃밭 실외 모종 심기 맥락만 채택; 시설·실내로 확대하지 않음",
+          "sourceId": "rda-100000733086-body"
+        },
+        {
+          "field": "startStage",
+          "value": "SEEDLING",
+          "locator": "본문: 작물별 모종 심는 시기",
+          "transformation": "씨앗 파종 시기로 전용하지 않음",
+          "sourceId": "rda-100000733086-body"
+        },
+        {
+          "field": "plantingWindow",
+          "value": {
+            "start": "04-11",
+            "end": "04-20"
+          },
+          "locator": "본문: 상추 4월 중순 (본문 기준; 제목 요약은 4월 상순으로 불일치)",
+          "transformation": "상순=1~10일, 중순=11~20일의 제품 달력 정규화; 해당 연도 기상·정확한 농업 경계·유일한 재배창 아님",
+          "sourceId": "rda-100000733086-body"
+        },
+        {
+          "field": "guide",
+          "value": "잎이 생기 있고 뿌리가 흙을 감싸는 모종을 고르고, 심기 전 밭의 수분 상태를 확인하세요. 급수는 생육과 날씨에 따라 달라집니다.",
+          "locator": "본문: 모종 구입·심기·물 관리 단락",
+          "transformation": "본문 요약; 원문의 주기를 자동 일정이나 고정 급수 명령으로 사용하지 않음",
+          "sourceId": "rda-100000733086-body"
+        }
+      ]
+    },
+    {
+      "id": "rda-cabbage",
+      "taxonSnapshotId": "p5-2026-10-20-cabbage",
+      "canonicalName": "양배추",
+      "assessmentReadiness": "GUIDE_ONLY",
+      "facts": [
+        {
+          "field": "canonicalName",
+          "value": "양배추",
+          "sourceId": "rda-100000733086-body",
+          "locator": "본문: 작물별 모종 심는 시기에서 양배추",
+          "transformation": "원문 한글 작물명만 채택; 품종·학명 식별로 확대하지 않음"
+        },
+        {
+          "field": "regionCode",
+          "value": "KR_CENTRAL",
+          "locator": "본문: 중부지방에서 실외재배를 기준으로",
+          "transformation": "중부지방을 제품의 수동 권역 코드로 표현; 개별 시군 매핑 없음",
+          "sourceId": "rda-100000733086-body"
+        },
+        {
+          "field": "growingMethod",
+          "value": "OUTDOOR_SOIL",
+          "locator": "본문: 중부지방에서 실외재배를 기준으로",
+          "transformation": "텃밭 실외 모종 심기 맥락만 채택; 시설·실내로 확대하지 않음",
+          "sourceId": "rda-100000733086-body"
+        },
+        {
+          "field": "startStage",
+          "value": "SEEDLING",
+          "locator": "본문: 작물별 모종 심는 시기",
+          "transformation": "씨앗 파종 시기로 전용하지 않음",
+          "sourceId": "rda-100000733086-body"
+        },
+        {
+          "field": "plantingWindow",
+          "value": {
+            "start": "04-01",
+            "end": "04-10"
+          },
+          "locator": "본문: 양배추 4월 상순",
+          "transformation": "상순=1~10일, 중순=11~20일의 제품 달력 정규화; 해당 연도 기상·정확한 농업 경계·유일한 재배창 아님",
+          "sourceId": "rda-100000733086-body"
+        },
+        {
+          "field": "guide",
+          "value": "잎이 생기 있고 뿌리가 흙을 감싸는 모종을 고르고, 심기 전 밭의 수분 상태를 확인하세요. 급수는 생육과 날씨에 따라 달라집니다.",
+          "locator": "본문: 모종 구입·심기·물 관리 단락",
+          "transformation": "본문 요약; 원문의 주기를 자동 일정이나 고정 급수 명령으로 사용하지 않음",
+          "sourceId": "rda-100000733086-body"
+        }
+      ]
+    },
+    {
+      "id": "rda-broccoli",
+      "taxonSnapshotId": "p5-2026-10-20-broccoli",
+      "canonicalName": "브로콜리",
+      "assessmentReadiness": "GUIDE_ONLY",
+      "facts": [
+        {
+          "field": "canonicalName",
+          "value": "브로콜리",
+          "sourceId": "rda-100000733086-body",
+          "locator": "본문: 작물별 모종 심는 시기에서 브로콜리",
+          "transformation": "원문 한글 작물명만 채택; 품종·학명 식별로 확대하지 않음"
+        },
+        {
+          "field": "regionCode",
+          "value": "KR_CENTRAL",
+          "locator": "본문: 중부지방에서 실외재배를 기준으로",
+          "transformation": "중부지방을 제품의 수동 권역 코드로 표현; 개별 시군 매핑 없음",
+          "sourceId": "rda-100000733086-body"
+        },
+        {
+          "field": "growingMethod",
+          "value": "OUTDOOR_SOIL",
+          "locator": "본문: 중부지방에서 실외재배를 기준으로",
+          "transformation": "텃밭 실외 모종 심기 맥락만 채택; 시설·실내로 확대하지 않음",
+          "sourceId": "rda-100000733086-body"
+        },
+        {
+          "field": "startStage",
+          "value": "SEEDLING",
+          "locator": "본문: 작물별 모종 심는 시기",
+          "transformation": "씨앗 파종 시기로 전용하지 않음",
+          "sourceId": "rda-100000733086-body"
+        },
+        {
+          "field": "plantingWindow",
+          "value": {
+            "start": "04-01",
+            "end": "04-10"
+          },
+          "locator": "본문: 브로콜리 4월 상순",
+          "transformation": "상순=1~10일, 중순=11~20일의 제품 달력 정규화; 해당 연도 기상·정확한 농업 경계·유일한 재배창 아님",
+          "sourceId": "rda-100000733086-body"
+        },
+        {
+          "field": "guide",
+          "value": "잎이 생기 있고 뿌리가 흙을 감싸는 모종을 고르고, 심기 전 밭의 수분 상태를 확인하세요. 급수는 생육과 날씨에 따라 달라집니다.",
+          "locator": "본문: 모종 구입·심기·물 관리 단락",
+          "transformation": "본문 요약; 원문의 주기를 자동 일정이나 고정 급수 명령으로 사용하지 않음",
+          "sourceId": "rda-100000733086-body"
+        }
+      ]
+    }
+  ]
+}

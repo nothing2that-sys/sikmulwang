@@ -844,3 +844,6 @@
 .backup-file { display: grid; gap: .5rem; min-height: 44px; }
 .backup-file input { width: 100%; min-width: 0; }
 .backup-job { border-top: 1px solid var(--border); padding-block: 1rem; }
+.recommend-grid { display: grid; gap: 1rem; grid-template-columns: repeat(auto-fit, minmax(min(100%, 20rem), 1fr)); }
+.recommend-grid .card, .recommend-reasons { overflow-wrap: anywhere; }
+.recommend-reasons { padding-inline-start: 1.3rem; }

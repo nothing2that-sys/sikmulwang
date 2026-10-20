@@ -11,9 +11,10 @@
     "lint": "eslint . --max-warnings 0",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
-    "build": "tsc --noEmit && vite build",
+    "build": "npm run catalog:check && tsc --noEmit && vite build",
     "preview": "vite preview --host 127.0.0.1",
-    "test:e2e": "npm run build && playwright test"
+    "test:e2e": "npm run build && playwright test",
+    "catalog:check": "node --experimental-strip-types scripts/check-catalog.mjs"
   },
   "dependencies": {
     "@zip.js/zip.js": "2.24.0",
