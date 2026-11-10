@@ -12,3 +12,11 @@ test-results/
 *.zip
 
 .test-temp/
+
+# Local profiles, caches and credentials
+data/
+credentials/
+.env
+.env.*
+.sites-runtime/
+.claude/
